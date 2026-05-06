@@ -9,76 +9,110 @@ def resource_path(relative_path):
         base_path = sys._MEIPASS
     except Exception:
         base_path = os.path.abspath(".")
-
     return os.path.join(base_path, relative_path)
 
 
 root = tk.Tk()
-
 root.title("HAMZA SERVICES")
 root.geometry("1280x720")
+root.minsize(1000, 600)
 root.configure(bg="black")
 
 
-bg_path = resource_path("assets/background.jpg")
-
-bg_image = Image.open(bg_path)
-bg_image = bg_image.resize((1280, 720))
-
-bg_photo = ImageTk.PhotoImage(bg_image)
-
-
-canvas = tk.Canvas(root, width=1280, height=720, highlightthickness=0)
+canvas = tk.Canvas(root, highlightthickness=0, bd=0)
 canvas.pack(fill="both", expand=True)
 
-canvas.create_image(0, 0, image=bg_photo, anchor="nw")
+
+background_photo = None
+icon_photos = {}
 
 
-canvas.create_text(
-    640,
-    70,
-    text="HAMZA SERVICES",
-    fill="white",
-    font=("Arial", 42, "bold")
-)
+def load_image(path, size):
+    image = Image.open(resource_path(path)).convert("RGBA")
+    image = image.resize(size, Image.LANCZOS)
+    return ImageTk.PhotoImage(image)
 
 
-items = [
-    ("وثائق", 220),
-    ("خدمات إلكترونية", 500),
-    ("أرشيف", 780),
-    ("إعدادات", 1060),
-]
+def draw_interface():
+    global background_photo, icon_photos
 
+    canvas.delete("all")
 
-for text, x in items:
+    width = root.winfo_width()
+    height = root.winfo_height()
 
-    card = tk.Frame(
-        root,
-        bg="#2f2f2f",
-        width=180,
-        height=180
+    if width < 10 or height < 10:
+        width, height = 1280, 720
+
+    bg = Image.open(resource_path("assets/background.jpg")).convert("RGB")
+    bg = bg.resize((width, height), Image.LANCZOS)
+
+    dark_layer = Image.new("RGBA", (width, height), (0, 0, 0, 75))
+    bg = bg.convert("RGBA")
+    bg.alpha_composite(dark_layer)
+
+    background_photo = ImageTk.PhotoImage(bg)
+    canvas.create_image(0, 0, image=background_photo, anchor="nw")
+
+    canvas.create_text(
+        width // 2,
+        int(height * 0.12),
+        text="HAMZA SERVICES",
+        fill="#f2f2f2",
+        font=("Arial", 52, "bold")
     )
 
-    card.pack_propagate(False)
+    icon_photos = {
+        "documents": load_image("assets/documents.png", (145, 145)),
+        "electronic": load_image("assets/electronic.png", (145, 145)),
+        "archive": load_image("assets/archive.png", (145, 145)),
+        "settings": load_image("assets/settings.png", (145, 145)),
+    }
 
-    label = tk.Label(
-        card,
-        text=text,
-        fg="white",
-        bg="#2f2f2f",
-        font=("Arial", 22, "bold"),
-        wraplength=160,
-        justify="center"
-    )
+    items = [
+        ("documents", "وثائق"),
+        ("electronic", "خدمات\nإلكترونية"),
+        ("archive", "أرشيف"),
+        ("settings", "إعدادات"),
+    ]
 
-    label.pack(expand=True)
+    positions = [
+        width * 0.20,
+        width * 0.40,
+        width * 0.60,
+        width * 0.80,
+    ]
 
-    canvas.create_window(
-        x,
-        360,
-        window=card
-    )
+    icon_y = height * 0.43
+    text_y = height * 0.64
 
+    for index, (key, label) in enumerate(items):
+        x = positions[index]
+
+        canvas.create_image(
+            x,
+            icon_y,
+            image=icon_photos[key],
+            anchor="center"
+        )
+
+        canvas.create_text(
+            x,
+            text_y,
+            text=label,
+            fill="#f2f2f2",
+            font=("Arial", 32, "bold"),
+            justify="center"
+        )
+
+
+def on_resize(event):
+    if event.widget == root:
+        draw_interface()
+
+
+root.bind("<Configure>", on_resize)
+
+draw_interface()
 
 root.mainloop()
