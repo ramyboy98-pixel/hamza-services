@@ -25,6 +25,7 @@ background_photo = None
 normal_icons = {}
 large_icons = {}
 settings_icons = {}
+current_page = "home"
 
 
 def load_icon(path, size):
@@ -33,156 +34,23 @@ def load_icon(path, size):
     return ImageTk.PhotoImage(image)
 
 
-def open_section(name):
+def draw_background(width, height):
+    global background_photo
 
-    if name == "settings":
+    bg = Image.open(resource_path("assets/background.jpg")).convert("RGB")
+    bg = bg.resize((width, height), Image.LANCZOS)
 
-        page = tk.Toplevel(root)
-        page.title("الإعدادات")
-        page.geometry("1200x720")
-        page.configure(bg="#181818")
+    dark_layer = Image.new("RGBA", (width, height), (0, 0, 0, 80))
+    bg = bg.convert("RGBA")
+    bg.alpha_composite(dark_layer)
 
-        title = tk.Label(
-            page,
-            text="الإعدادات",
-            font=("Arial", 38, "bold"),
-            fg="white",
-            bg="#181818"
-        )
-        title.pack(pady=35)
-
-        cards_frame = tk.Frame(page, bg="#181818")
-        cards_frame.pack(expand=True)
-
-        global settings_icons
-
-        settings_icons = {
-            "customize": load_icon("assets/customize.png", (90, 90)),
-            "backup": load_icon("assets/backup.png", (90, 90)),
-            "printer": load_icon("assets/printer.png", (90, 90)),
-            "info": load_icon("assets/info.png", (90, 90)),
-        }
-
-        settings_items = [
-            ("customize", "تخصيص الواجهة"),
-            ("backup", "النسخ الاحتياطي"),
-            ("printer", "الطباعة\nوالوثائق"),
-            ("info", "معلومات البرنامج")
-        ]
-
-        for key, text in settings_items:
-
-            card = tk.Frame(
-                cards_frame,
-                bg="#2a2a2a",
-                width=230,
-                height=260,
-                highlightthickness=2,
-                highlightbackground="#3d3d3d"
-            )
-
-            card.pack(side="left", padx=25)
-            card.pack_propagate(False)
-
-            icon = tk.Label(
-                card,
-                image=settings_icons[key],
-                bg="#2a2a2a"
-            )
-            icon.pack(pady=(25, 15))
-
-            label = tk.Label(
-                card,
-                text=text,
-                font=("Arial", 20, "bold"),
-                fg="white",
-                bg="#2a2a2a",
-                wraplength=180,
-                justify="center"
-            )
-            label.pack(expand=True)
-
-            def enter_effect(event, target=card):
-                target.config(bg="#353535")
-
-            def leave_effect(event, target=card):
-                target.config(bg="#2a2a2a")
-
-            card.bind("<Enter>", enter_effect)
-            card.bind("<Leave>", leave_effect)
-
-            icon.bind("<Enter>", enter_effect)
-            icon.bind("<Leave>", leave_effect)
-
-            label.bind("<Enter>", enter_effect)
-            label.bind("<Leave>", leave_effect)
-
-        back_btn = tk.Button(
-            page,
-            text="رجوع",
-            font=("Arial", 16, "bold"),
-            bg="#404040",
-            fg="white",
-            activebackground="#5a5a5a",
-            activeforeground="white",
-            relief="flat",
-            padx=28,
-            pady=12,
-            command=page.destroy
-        )
-
-        back_btn.pack(pady=35)
-
-        return
-
-    titles = {
-        "documents": "واجهة الوثائق",
-        "electronic": "واجهة الخدمات الإلكترونية",
-        "archive": "واجهة الأرشيف",
-    }
-
-    page = tk.Toplevel(root)
-    page.title(titles.get(name, "واجهة جديدة"))
-    page.geometry("900x600")
-    page.configure(bg="#1f1f1f")
-
-    title = tk.Label(
-        page,
-        text=titles.get(name, "واجهة جديدة"),
-        font=("Arial", 32, "bold"),
-        fg="white",
-        bg="#1f1f1f"
-    )
-    title.pack(pady=40)
-
-    note = tk.Label(
-        page,
-        text="هذه واجهة مؤقتة، سنبني تفاصيلها لاحقًا.",
-        font=("Arial", 18),
-        fg="#dddddd",
-        bg="#1f1f1f"
-    )
-    note.pack(pady=20)
-
-    close_btn = tk.Button(
-        page,
-        text="إغلاق",
-        font=("Arial", 16, "bold"),
-        bg="#3a3a3a",
-        fg="white",
-        activebackground="#555555",
-        activeforeground="white",
-        relief="flat",
-        padx=25,
-        pady=10,
-        command=page.destroy
-    )
-    close_btn.pack(pady=40)
+    background_photo = ImageTk.PhotoImage(bg)
+    canvas.create_image(0, 0, image=background_photo, anchor="nw")
 
 
-def draw_interface():
-    global background_photo, normal_icons, large_icons
-
+def show_home():
+    global current_page, normal_icons, large_icons
+    current_page = "home"
     canvas.delete("all")
 
     width = root.winfo_width()
@@ -191,21 +59,7 @@ def draw_interface():
     if width < 10 or height < 10:
         width, height = 1280, 720
 
-    bg = Image.open(resource_path("assets/background.jpg")).convert("RGB")
-    bg = bg.resize((width, height), Image.LANCZOS)
-
-    dark_layer = Image.new("RGBA", (width, height), (0, 0, 0, 75))
-    bg = bg.convert("RGBA")
-    bg.alpha_composite(dark_layer)
-
-    background_photo = ImageTk.PhotoImage(bg)
-
-    canvas.create_image(
-        0,
-        0,
-        image=background_photo,
-        anchor="nw"
-    )
+    draw_background(width, height)
 
     canvas.create_text(
         width // 2,
@@ -247,7 +101,6 @@ def draw_interface():
     text_y = height * 0.64
 
     for index, (key, label) in enumerate(items):
-
         x = positions[index]
 
         image_id = canvas.create_image(
@@ -275,7 +128,10 @@ def draw_interface():
             root.config(cursor="")
 
         def on_click(event, k=key):
-            open_section(k)
+            if k == "settings":
+                show_settings()
+            else:
+                show_placeholder(k)
 
         canvas.tag_bind(image_id, "<Enter>", on_enter)
         canvas.tag_bind(image_id, "<Leave>", on_leave)
@@ -286,13 +142,208 @@ def draw_interface():
         canvas.tag_bind(text_id, "<Button-1>", on_click)
 
 
+def show_settings():
+    global current_page, settings_icons
+    current_page = "settings"
+    canvas.delete("all")
+
+    width = root.winfo_width()
+    height = root.winfo_height()
+
+    if width < 10 or height < 10:
+        width, height = 1280, 720
+
+    draw_background(width, height)
+
+    canvas.create_text(
+        width // 2,
+        int(height * 0.12),
+        text="الإعدادات",
+        fill="#f2f2f2",
+        font=("Arial", 48, "bold")
+    )
+
+    settings_icons = {
+        "customize": load_icon("assets/customize.png", (90, 90)),
+        "backup": load_icon("assets/backup.png", (90, 90)),
+        "printer": load_icon("assets/printer.png", (90, 90)),
+        "info": load_icon("assets/info.png", (90, 90)),
+    }
+
+    items = [
+        ("customize", "تخصيص الواجهة"),
+        ("backup", "النسخ الاحتياطي"),
+        ("printer", "الطباعة\nوالوثائق"),
+        ("info", "معلومات البرنامج"),
+    ]
+
+    positions = [
+        width * 0.20,
+        width * 0.40,
+        width * 0.60,
+        width * 0.80,
+    ]
+
+    card_y = height * 0.48
+
+    for index, (key, label) in enumerate(items):
+        x = positions[index]
+
+        card = canvas.create_rectangle(
+            x - 110,
+            card_y - 130,
+            x + 110,
+            card_y + 130,
+            fill="#2a2a2a",
+            outline="#555555",
+            width=2
+        )
+
+        icon_id = canvas.create_image(
+            x,
+            card_y - 45,
+            image=settings_icons[key],
+            anchor="center"
+        )
+
+        text_id = canvas.create_text(
+            x,
+            card_y + 70,
+            text=label,
+            fill="white",
+            font=("Arial", 21, "bold"),
+            justify="center"
+        )
+
+        def on_enter(event, c=card):
+            canvas.itemconfig(c, fill="#383838")
+            root.config(cursor="hand2")
+
+        def on_leave(event, c=card):
+            canvas.itemconfig(c, fill="#2a2a2a")
+            root.config(cursor="")
+
+        for item_id in (card, icon_id, text_id):
+            canvas.tag_bind(item_id, "<Enter>", on_enter)
+            canvas.tag_bind(item_id, "<Leave>", on_leave)
+
+    back_btn = canvas.create_rectangle(
+        width // 2 - 80,
+        height - 105,
+        width // 2 + 80,
+        height - 55,
+        fill="#404040",
+        outline="#666666",
+        width=2
+    )
+
+    back_text = canvas.create_text(
+        width // 2,
+        height - 80,
+        text="رجوع",
+        fill="white",
+        font=("Arial", 18, "bold")
+    )
+
+    def back_enter(event):
+        canvas.itemconfig(back_btn, fill="#555555")
+        root.config(cursor="hand2")
+
+    def back_leave(event):
+        canvas.itemconfig(back_btn, fill="#404040")
+        root.config(cursor="")
+
+    def back_click(event):
+        show_home()
+
+    for item_id in (back_btn, back_text):
+        canvas.tag_bind(item_id, "<Enter>", back_enter)
+        canvas.tag_bind(item_id, "<Leave>", back_leave)
+        canvas.tag_bind(item_id, "<Button-1>", back_click)
+
+
+def show_placeholder(section):
+    global current_page
+    current_page = section
+    canvas.delete("all")
+
+    width = root.winfo_width()
+    height = root.winfo_height()
+
+    if width < 10 or height < 10:
+        width, height = 1280, 720
+
+    draw_background(width, height)
+
+    titles = {
+        "documents": "واجهة الوثائق",
+        "electronic": "واجهة الخدمات الإلكترونية",
+        "archive": "واجهة الأرشيف",
+    }
+
+    canvas.create_text(
+        width // 2,
+        int(height * 0.18),
+        text=titles.get(section, "واجهة جديدة"),
+        fill="#f2f2f2",
+        font=("Arial", 46, "bold")
+    )
+
+    canvas.create_text(
+        width // 2,
+        int(height * 0.42),
+        text="هذه واجهة مؤقتة، سنبني تفاصيلها لاحقًا.",
+        fill="#dddddd",
+        font=("Arial", 24, "bold")
+    )
+
+    back_btn = canvas.create_rectangle(
+        width // 2 - 80,
+        height - 105,
+        width // 2 + 80,
+        height - 55,
+        fill="#404040",
+        outline="#666666",
+        width=2
+    )
+
+    back_text = canvas.create_text(
+        width // 2,
+        height - 80,
+        text="رجوع",
+        fill="white",
+        font=("Arial", 18, "bold")
+    )
+
+    def back_enter(event):
+        canvas.itemconfig(back_btn, fill="#555555")
+        root.config(cursor="hand2")
+
+    def back_leave(event):
+        canvas.itemconfig(back_btn, fill="#404040")
+        root.config(cursor="")
+
+    def back_click(event):
+        show_home()
+
+    for item_id in (back_btn, back_text):
+        canvas.tag_bind(item_id, "<Enter>", back_enter)
+        canvas.tag_bind(item_id, "<Leave>", back_leave)
+        canvas.tag_bind(item_id, "<Button-1>", back_click)
+
+
 def on_resize(event):
     if event.widget == root:
-        draw_interface()
+        if current_page == "home":
+            show_home()
+        elif current_page == "settings":
+            show_settings()
+        else:
+            show_placeholder(current_page)
 
 
 root.bind("<Configure>", on_resize)
 
-draw_interface()
+show_home()
 
 root.mainloop()
