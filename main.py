@@ -22,7 +22,6 @@ canvas = tk.Canvas(root, highlightthickness=0, bd=0)
 canvas.pack(fill="both", expand=True)
 
 background_photo = None
-icon_photos = {}
 normal_icons = {}
 large_icons = {}
 current_hover = None
@@ -36,11 +35,76 @@ def load_icon(path, size):
 
 def open_section(name):
 
+    if name == "settings":
+
+        page = tk.Toplevel(root)
+        page.title("الإعدادات")
+        page.geometry("1100x700")
+        page.configure(bg="#1b1b1b")
+
+        header = tk.Label(
+            page,
+            text="الإعدادات",
+            font=("Arial", 36, "bold"),
+            fg="white",
+            bg="#1b1b1b"
+        )
+        header.pack(pady=35)
+
+        cards_frame = tk.Frame(page, bg="#1b1b1b")
+        cards_frame.pack(expand=True)
+
+        settings_items = [
+            "تخصيص الواجهة",
+            "النسخ الاحتياطي",
+            "الطباعة والوثائق",
+            "معلومات البرنامج"
+        ]
+
+        for text in settings_items:
+            card = tk.Frame(
+                cards_frame,
+                bg="#2e2e2e",
+                width=220,
+                height=220,
+                highlightthickness=2,
+                highlightbackground="#3f3f3f"
+            )
+            card.pack(side="left", padx=25)
+            card.pack_propagate(False)
+
+            label = tk.Label(
+                card,
+                text=text,
+                font=("Arial", 20, "bold"),
+                fg="white",
+                bg="#2e2e2e",
+                wraplength=180,
+                justify="center"
+            )
+            label.pack(expand=True)
+
+        close_btn = tk.Button(
+            page,
+            text="رجوع",
+            font=("Arial", 16, "bold"),
+            bg="#3b3b3b",
+            fg="white",
+            activebackground="#555555",
+            activeforeground="white",
+            relief="flat",
+            padx=25,
+            pady=10,
+            command=page.destroy
+        )
+        close_btn.pack(pady=35)
+
+        return
+
     titles = {
         "documents": "واجهة الوثائق",
         "electronic": "واجهة الخدمات الإلكترونية",
         "archive": "واجهة الأرشيف",
-        "settings": "واجهة الإعدادات",
     }
 
     page = tk.Toplevel(root)
@@ -83,7 +147,7 @@ def open_section(name):
 
 
 def draw_interface():
-    global background_photo, icon_photos, normal_icons, large_icons, current_hover
+    global background_photo, normal_icons, large_icons, current_hover
 
     current_hover = None
     canvas.delete("all")
@@ -126,8 +190,6 @@ def draw_interface():
         "settings": load_icon("assets/settings.png", (160, 160)),
     }
 
-    icon_photos = normal_icons
-
     items = [
         ("documents", "وثائق"),
         ("electronic", "خدمات\nإلكترونية"),
@@ -146,7 +208,6 @@ def draw_interface():
     text_y = height * 0.64
 
     for index, (key, label) in enumerate(items):
-
         x = positions[index]
 
         image_id = canvas.create_image(
