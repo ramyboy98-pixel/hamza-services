@@ -1,7 +1,9 @@
 import tkinter as tk
+from tkinter import filedialog
 from PIL import Image, ImageTk
 import os
 import sys
+import shutil
 
 
 def resource_path(relative_path):
@@ -27,6 +29,9 @@ large_icons = {}
 settings_icons = {}
 current_page = "home"
 
+BACKGROUND_FILE = "assets/background.jpg"
+DEFAULT_BACKGROUND = "assets/background.jpg"
+
 
 def load_icon(path, size):
     image = Image.open(resource_path(path)).convert("RGBA")
@@ -34,10 +39,34 @@ def load_icon(path, size):
     return ImageTk.PhotoImage(image)
 
 
+def change_background():
+
+    file_path = filedialog.askopenfilename(
+        title="اختر صورة خلفية",
+        filetypes=[
+            ("Images", "*.png *.jpg *.jpeg")
+        ]
+    )
+
+    if not file_path:
+        return
+
+    try:
+        shutil.copy(file_path, BACKGROUND_FILE)
+
+        if current_page == "home":
+            show_home()
+        elif current_page == "settings":
+            show_settings()
+
+    except Exception as e:
+        print(e)
+
+
 def draw_background(width, height):
     global background_photo
 
-    bg = Image.open(resource_path("assets/background.jpg")).convert("RGB")
+    bg = Image.open(resource_path(BACKGROUND_FILE)).convert("RGB")
     bg = bg.resize((width, height), Image.LANCZOS)
 
     dark_layer = Image.new("RGBA", (width, height), (0, 0, 0, 80))
@@ -50,7 +79,9 @@ def draw_background(width, height):
 
 def show_home():
     global current_page, normal_icons, large_icons
+
     current_page = "home"
+
     canvas.delete("all")
 
     width = root.winfo_width()
@@ -101,6 +132,7 @@ def show_home():
     text_y = height * 0.64
 
     for index, (key, label) in enumerate(items):
+
         x = positions[index]
 
         image_id = canvas.create_image(
@@ -143,8 +175,11 @@ def show_home():
 
 
 def show_settings():
+
     global current_page, settings_icons
+
     current_page = "settings"
+
     canvas.delete("all")
 
     width = root.winfo_width()
@@ -157,7 +192,7 @@ def show_settings():
 
     canvas.create_text(
         width // 2,
-        int(height * 0.12),
+        int(height * 0.10),
         text="الإعدادات",
         fill="#f2f2f2",
         font=("Arial", 48, "bold")
@@ -184,9 +219,10 @@ def show_settings():
         width * 0.80,
     ]
 
-    card_y = height * 0.48
+    card_y = height * 0.40
 
     for index, (key, label) in enumerate(items):
+
         x = positions[index]
 
         card = canvas.create_rectangle(
@@ -202,8 +238,7 @@ def show_settings():
         icon_id = canvas.create_image(
             x,
             card_y - 45,
-            image=settings_icons[key],
-            anchor="center"
+            image=settings_icons[key]
         )
 
         text_id = canvas.create_text(
@@ -223,15 +258,21 @@ def show_settings():
             canvas.itemconfig(c, fill="#2a2a2a")
             root.config(cursor="")
 
+        def on_click(event, k=key):
+
+            if k == "customize":
+                show_customize()
+
         for item_id in (card, icon_id, text_id):
             canvas.tag_bind(item_id, "<Enter>", on_enter)
             canvas.tag_bind(item_id, "<Leave>", on_leave)
+            canvas.tag_bind(item_id, "<Button-1>", on_click)
 
     back_btn = canvas.create_rectangle(
         width // 2 - 80,
-        height - 105,
+        height - 90,
         width // 2 + 80,
-        height - 55,
+        height - 40,
         fill="#404040",
         outline="#666666",
         width=2
@@ -239,7 +280,7 @@ def show_settings():
 
     back_text = canvas.create_text(
         width // 2,
-        height - 80,
+        height - 65,
         text="رجوع",
         fill="white",
         font=("Arial", 18, "bold")
@@ -262,16 +303,154 @@ def show_settings():
         canvas.tag_bind(item_id, "<Button-1>", back_click)
 
 
-def show_placeholder(section):
+def show_customize():
+
     global current_page
-    current_page = section
+
+    current_page = "customize"
+
     canvas.delete("all")
 
     width = root.winfo_width()
     height = root.winfo_height()
 
-    if width < 10 or height < 10:
-        width, height = 1280, 720
+    draw_background(width, height)
+
+    canvas.create_text(
+        width // 2,
+        90,
+        text="تخصيص الواجهة",
+        fill="white",
+        font=("Arial", 42, "bold")
+    )
+
+    change_btn = canvas.create_rectangle(
+        width // 2 - 180,
+        250,
+        width // 2 + 180,
+        320,
+        fill="#2f2f2f",
+        outline="#666666",
+        width=2
+    )
+
+    change_text = canvas.create_text(
+        width // 2,
+        285,
+        text="تغيير صورة الخلفية",
+        fill="white",
+        font=("Arial", 22, "bold")
+    )
+
+    reset_btn = canvas.create_rectangle(
+        width // 2 - 180,
+        370,
+        width // 2 + 180,
+        440,
+        fill="#2f2f2f",
+        outline="#666666",
+        width=2
+    )
+
+    reset_text = canvas.create_text(
+        width // 2,
+        405,
+        text="استرجاع الخلفية الأصلية",
+        fill="white",
+        font=("Arial", 22, "bold")
+    )
+
+    back_btn = canvas.create_rectangle(
+        width // 2 - 90,
+        height - 90,
+        width // 2 + 90,
+        height - 40,
+        fill="#404040",
+        outline="#666666",
+        width=2
+    )
+
+    back_text = canvas.create_text(
+        width // 2,
+        height - 65,
+        text="رجوع",
+        fill="white",
+        font=("Arial", 18, "bold")
+    )
+
+    def enter(event, btn):
+        canvas.itemconfig(btn, fill="#4a4a4a")
+        root.config(cursor="hand2")
+
+    def leave(event, btn, color):
+        canvas.itemconfig(btn, fill=color)
+        root.config(cursor="")
+
+    def back_click(event):
+        show_settings()
+
+    for item_id in (change_btn, change_text):
+        canvas.tag_bind(
+            item_id,
+            "<Enter>",
+            lambda e, b=change_btn: enter(e, b)
+        )
+
+        canvas.tag_bind(
+            item_id,
+            "<Leave>",
+            lambda e, b=change_btn: leave(e, b, "#2f2f2f")
+        )
+
+        canvas.tag_bind(
+            item_id,
+            "<Button-1>",
+            lambda e: change_background()
+        )
+
+    for item_id in (reset_btn, reset_text):
+        canvas.tag_bind(
+            item_id,
+            "<Enter>",
+            lambda e, b=reset_btn: enter(e, b)
+        )
+
+        canvas.tag_bind(
+            item_id,
+            "<Leave>",
+            lambda e, b=reset_btn: leave(e, b, "#2f2f2f")
+        )
+
+    for item_id in (back_btn, back_text):
+        canvas.tag_bind(
+            item_id,
+            "<Enter>",
+            lambda e, b=back_btn: enter(e, b)
+        )
+
+        canvas.tag_bind(
+            item_id,
+            "<Leave>",
+            lambda e, b=back_btn: leave(e, b, "#404040")
+        )
+
+        canvas.tag_bind(
+            item_id,
+            "<Button-1>",
+            back_click
+        )
+
+
+def show_placeholder(section):
+
+    global current_page
+
+    current_page = section
+
+    canvas.delete("all")
+
+    width = root.winfo_width()
+    height = root.winfo_height()
 
     draw_background(width, height)
 
@@ -283,25 +462,25 @@ def show_placeholder(section):
 
     canvas.create_text(
         width // 2,
-        int(height * 0.18),
+        140,
         text=titles.get(section, "واجهة جديدة"),
-        fill="#f2f2f2",
+        fill="white",
         font=("Arial", 46, "bold")
     )
 
     canvas.create_text(
         width // 2,
-        int(height * 0.42),
+        320,
         text="هذه واجهة مؤقتة، سنبني تفاصيلها لاحقًا.",
         fill="#dddddd",
         font=("Arial", 24, "bold")
     )
 
     back_btn = canvas.create_rectangle(
-        width // 2 - 80,
-        height - 105,
-        width // 2 + 80,
-        height - 55,
+        width // 2 - 90,
+        height - 90,
+        width // 2 + 90,
+        height - 40,
         fill="#404040",
         outline="#666666",
         width=2
@@ -309,35 +488,42 @@ def show_placeholder(section):
 
     back_text = canvas.create_text(
         width // 2,
-        height - 80,
+        height - 65,
         text="رجوع",
         fill="white",
         font=("Arial", 18, "bold")
     )
 
-    def back_enter(event):
+    def enter(event):
         canvas.itemconfig(back_btn, fill="#555555")
         root.config(cursor="hand2")
 
-    def back_leave(event):
+    def leave(event):
         canvas.itemconfig(back_btn, fill="#404040")
         root.config(cursor="")
 
-    def back_click(event):
+    def click(event):
         show_home()
 
     for item_id in (back_btn, back_text):
-        canvas.tag_bind(item_id, "<Enter>", back_enter)
-        canvas.tag_bind(item_id, "<Leave>", back_leave)
-        canvas.tag_bind(item_id, "<Button-1>", back_click)
+        canvas.tag_bind(item_id, "<Enter>", enter)
+        canvas.tag_bind(item_id, "<Leave>", leave)
+        canvas.tag_bind(item_id, "<Button-1>", click)
 
 
 def on_resize(event):
+
     if event.widget == root:
+
         if current_page == "home":
             show_home()
+
         elif current_page == "settings":
             show_settings()
+
+        elif current_page == "customize":
+            show_customize()
+
         else:
             show_placeholder(current_page)
 
