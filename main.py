@@ -24,7 +24,7 @@ canvas.pack(fill="both", expand=True)
 background_photo = None
 normal_icons = {}
 large_icons = {}
-current_hover = None
+settings_icons = {}
 
 
 def load_icon(path, size):
@@ -39,65 +39,99 @@ def open_section(name):
 
         page = tk.Toplevel(root)
         page.title("الإعدادات")
-        page.geometry("1100x700")
-        page.configure(bg="#1b1b1b")
+        page.geometry("1200x720")
+        page.configure(bg="#181818")
 
-        header = tk.Label(
+        title = tk.Label(
             page,
             text="الإعدادات",
-            font=("Arial", 36, "bold"),
+            font=("Arial", 38, "bold"),
             fg="white",
-            bg="#1b1b1b"
+            bg="#181818"
         )
-        header.pack(pady=35)
+        title.pack(pady=35)
 
-        cards_frame = tk.Frame(page, bg="#1b1b1b")
+        cards_frame = tk.Frame(page, bg="#181818")
         cards_frame.pack(expand=True)
 
+        global settings_icons
+
+        settings_icons = {
+            "customize": load_icon("assets/customize.png", (90, 90)),
+            "backup": load_icon("assets/backup.png", (90, 90)),
+            "printer": load_icon("assets/printer.png", (90, 90)),
+            "info": load_icon("assets/info.png", (90, 90)),
+        }
+
         settings_items = [
-            "تخصيص الواجهة",
-            "النسخ الاحتياطي",
-            "الطباعة والوثائق",
-            "معلومات البرنامج"
+            ("customize", "تخصيص الواجهة"),
+            ("backup", "النسخ الاحتياطي"),
+            ("printer", "الطباعة\nوالوثائق"),
+            ("info", "معلومات البرنامج")
         ]
 
-        for text in settings_items:
+        for key, text in settings_items:
+
             card = tk.Frame(
                 cards_frame,
-                bg="#2e2e2e",
-                width=220,
-                height=220,
+                bg="#2a2a2a",
+                width=230,
+                height=260,
                 highlightthickness=2,
-                highlightbackground="#3f3f3f"
+                highlightbackground="#3d3d3d"
             )
+
             card.pack(side="left", padx=25)
             card.pack_propagate(False)
+
+            icon = tk.Label(
+                card,
+                image=settings_icons[key],
+                bg="#2a2a2a"
+            )
+            icon.pack(pady=(25, 15))
 
             label = tk.Label(
                 card,
                 text=text,
                 font=("Arial", 20, "bold"),
                 fg="white",
-                bg="#2e2e2e",
+                bg="#2a2a2a",
                 wraplength=180,
                 justify="center"
             )
             label.pack(expand=True)
 
-        close_btn = tk.Button(
+            def enter_effect(event, target=card):
+                target.config(bg="#353535")
+
+            def leave_effect(event, target=card):
+                target.config(bg="#2a2a2a")
+
+            card.bind("<Enter>", enter_effect)
+            card.bind("<Leave>", leave_effect)
+
+            icon.bind("<Enter>", enter_effect)
+            icon.bind("<Leave>", leave_effect)
+
+            label.bind("<Enter>", enter_effect)
+            label.bind("<Leave>", leave_effect)
+
+        back_btn = tk.Button(
             page,
             text="رجوع",
             font=("Arial", 16, "bold"),
-            bg="#3b3b3b",
+            bg="#404040",
             fg="white",
-            activebackground="#555555",
+            activebackground="#5a5a5a",
             activeforeground="white",
             relief="flat",
-            padx=25,
-            pady=10,
+            padx=28,
+            pady=12,
             command=page.destroy
         )
-        close_btn.pack(pady=35)
+
+        back_btn.pack(pady=35)
 
         return
 
@@ -147,9 +181,8 @@ def open_section(name):
 
 
 def draw_interface():
-    global background_photo, normal_icons, large_icons, current_hover
+    global background_photo, normal_icons, large_icons
 
-    current_hover = None
     canvas.delete("all")
 
     width = root.winfo_width()
@@ -166,7 +199,13 @@ def draw_interface():
     bg.alpha_composite(dark_layer)
 
     background_photo = ImageTk.PhotoImage(bg)
-    canvas.create_image(0, 0, image=background_photo, anchor="nw")
+
+    canvas.create_image(
+        0,
+        0,
+        image=background_photo,
+        anchor="nw"
+    )
 
     canvas.create_text(
         width // 2,
@@ -208,14 +247,14 @@ def draw_interface():
     text_y = height * 0.64
 
     for index, (key, label) in enumerate(items):
+
         x = positions[index]
 
         image_id = canvas.create_image(
             x,
             icon_y,
             image=normal_icons[key],
-            anchor="center",
-            tags=(key, "menu_item")
+            anchor="center"
         )
 
         text_id = canvas.create_text(
@@ -224,19 +263,14 @@ def draw_interface():
             text=label,
             fill="#f2f2f2",
             font=("Arial", 32, "bold"),
-            justify="center",
-            tags=(key, "menu_item")
+            justify="center"
         )
 
         def on_enter(event, k=key, img=image_id):
-            global current_hover
-            current_hover = k
             canvas.itemconfig(img, image=large_icons[k])
             root.config(cursor="hand2")
 
         def on_leave(event, k=key, img=image_id):
-            global current_hover
-            current_hover = None
             canvas.itemconfig(img, image=normal_icons[k])
             root.config(cursor="")
 
