@@ -35,7 +35,51 @@ def load_icon(path, size):
 
 
 def open_section(name):
-    print(f"Open: {name}")
+
+    titles = {
+        "documents": "واجهة الوثائق",
+        "electronic": "واجهة الخدمات الإلكترونية",
+        "archive": "واجهة الأرشيف",
+        "settings": "واجهة الإعدادات",
+    }
+
+    page = tk.Toplevel(root)
+    page.title(titles.get(name, "واجهة جديدة"))
+    page.geometry("900x600")
+    page.configure(bg="#1f1f1f")
+
+    title = tk.Label(
+        page,
+        text=titles.get(name, "واجهة جديدة"),
+        font=("Arial", 32, "bold"),
+        fg="white",
+        bg="#1f1f1f"
+    )
+    title.pack(pady=40)
+
+    note = tk.Label(
+        page,
+        text="هذه واجهة مؤقتة، سنبني تفاصيلها لاحقًا.",
+        font=("Arial", 18),
+        fg="#dddddd",
+        bg="#1f1f1f"
+    )
+    note.pack(pady=20)
+
+    close_btn = tk.Button(
+        page,
+        text="إغلاق",
+        font=("Arial", 16, "bold"),
+        bg="#3a3a3a",
+        fg="white",
+        activebackground="#555555",
+        activeforeground="white",
+        relief="flat",
+        padx=25,
+        pady=10,
+        command=page.destroy
+    )
+    close_btn.pack(pady=40)
 
 
 def draw_interface():
@@ -102,6 +146,7 @@ def draw_interface():
     text_y = height * 0.64
 
     for index, (key, label) in enumerate(items):
+
         x = positions[index]
 
         image_id = canvas.create_image(
