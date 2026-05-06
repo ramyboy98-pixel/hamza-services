@@ -18,24 +18,30 @@ root.geometry("1280x720")
 root.minsize(1000, 600)
 root.configure(bg="black")
 
-
 canvas = tk.Canvas(root, highlightthickness=0, bd=0)
 canvas.pack(fill="both", expand=True)
 
-
 background_photo = None
 icon_photos = {}
+normal_icons = {}
+large_icons = {}
+current_hover = None
 
 
-def load_image(path, size):
+def load_icon(path, size):
     image = Image.open(resource_path(path)).convert("RGBA")
     image = image.resize(size, Image.LANCZOS)
     return ImageTk.PhotoImage(image)
 
 
-def draw_interface():
-    global background_photo, icon_photos
+def open_section(name):
+    print(f"Open: {name}")
 
+
+def draw_interface():
+    global background_photo, icon_photos, normal_icons, large_icons, current_hover
+
+    current_hover = None
     canvas.delete("all")
 
     width = root.winfo_width()
@@ -62,12 +68,21 @@ def draw_interface():
         font=("Arial", 52, "bold")
     )
 
-    icon_photos = {
-        "documents": load_image("assets/documents.png", (145, 145)),
-        "electronic": load_image("assets/electronic.png", (145, 145)),
-        "archive": load_image("assets/archive.png", (145, 145)),
-        "settings": load_image("assets/settings.png", (145, 145)),
+    normal_icons = {
+        "documents": load_icon("assets/documents.png", (145, 145)),
+        "electronic": load_icon("assets/electronic.png", (145, 145)),
+        "archive": load_icon("assets/archive.png", (145, 145)),
+        "settings": load_icon("assets/settings.png", (145, 145)),
     }
+
+    large_icons = {
+        "documents": load_icon("assets/documents.png", (160, 160)),
+        "electronic": load_icon("assets/electronic.png", (160, 160)),
+        "archive": load_icon("assets/archive.png", (160, 160)),
+        "settings": load_icon("assets/settings.png", (160, 160)),
+    }
+
+    icon_photos = normal_icons
 
     items = [
         ("documents", "وثائق"),
@@ -89,21 +104,46 @@ def draw_interface():
     for index, (key, label) in enumerate(items):
         x = positions[index]
 
-        canvas.create_image(
+        image_id = canvas.create_image(
             x,
             icon_y,
-            image=icon_photos[key],
-            anchor="center"
+            image=normal_icons[key],
+            anchor="center",
+            tags=(key, "menu_item")
         )
 
-        canvas.create_text(
+        text_id = canvas.create_text(
             x,
             text_y,
             text=label,
             fill="#f2f2f2",
             font=("Arial", 32, "bold"),
-            justify="center"
+            justify="center",
+            tags=(key, "menu_item")
         )
+
+        def on_enter(event, k=key, img=image_id):
+            global current_hover
+            current_hover = k
+            canvas.itemconfig(img, image=large_icons[k])
+            root.config(cursor="hand2")
+
+        def on_leave(event, k=key, img=image_id):
+            global current_hover
+            current_hover = None
+            canvas.itemconfig(img, image=normal_icons[k])
+            root.config(cursor="")
+
+        def on_click(event, k=key):
+            open_section(k)
+
+        canvas.tag_bind(image_id, "<Enter>", on_enter)
+        canvas.tag_bind(image_id, "<Leave>", on_leave)
+        canvas.tag_bind(image_id, "<Button-1>", on_click)
+
+        canvas.tag_bind(text_id, "<Enter>", on_enter)
+        canvas.tag_bind(text_id, "<Leave>", on_leave)
+        canvas.tag_bind(text_id, "<Button-1>", on_click)
 
 
 def on_resize(event):
