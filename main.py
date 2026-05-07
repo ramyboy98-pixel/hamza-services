@@ -27,13 +27,7 @@ DEFAULT_SETTINGS = {
     "background": "",
     "theme": "dark",
     "accent_color": "#ffa51f",
-    "font_size": "medium",
-    "effects": True,
-    "printer_name": "الطابعة الافتراضية",
-    "color_printing": True,
-    "print_preview": True,
-    "save_pdf": True,
-    "clients_count": 0
+    "font_size": "medium"
 }
 
 ACCENT_COLORS = {
@@ -255,7 +249,7 @@ def set_font_size(size):
 
 
 def toggle_effects():
-    settings["effects"] = not settings.get("effects", True)
+    settings["effects"] = not True
     save_settings(settings)
     show_customize()
 
@@ -265,7 +259,6 @@ def reset_factory():
     settings["theme"] = "dark"
     settings["accent_color"] = "#ffa51f"
     settings["font_size"] = "medium"
-    settings["effects"] = True
     save_settings(settings)
     messagebox.showinfo("تم", "تمت إعادة ضبط إعدادات الواجهة.")
     show_customize()
@@ -381,12 +374,12 @@ def draw_top_back(title, back_command):
     )
 
     def enter(event):
-        if settings.get("effects", True):
+        if True:
             canvas.itemconfig(back_box, fill=theme["button_hover"])
         root.config(cursor="hand2")
 
     def leave(event):
-        if settings.get("effects", True):
+        if True:
             canvas.itemconfig(back_box, fill=theme["button"])
         root.config(cursor="")
 
@@ -463,12 +456,12 @@ def draw_list(items, on_click_func):
         )
 
         def on_enter(event, c=card):
-            if settings.get("effects", True):
+            if True:
                 canvas.itemconfig(c, fill=theme["card_hover"])
             root.config(cursor="hand2")
 
         def on_leave(event, c=card):
-            if settings.get("effects", True):
+            if True:
                 canvas.itemconfig(c, fill=theme["card"])
             root.config(cursor="")
 
@@ -558,12 +551,12 @@ def show_login():
             canvas.itemconfig(error_text, text="اسم المستخدم أو كلمة المرور غير صحيحة")
 
     def forgot_enter(event):
-        if settings.get("effects", True):
+        if True:
             canvas.itemconfig(forgot_text, fill=accent)
         root.config(cursor="hand2")
 
     def forgot_leave(event):
-        if settings.get("effects", True):
+        if True:
             canvas.itemconfig(forgot_text, fill="#ffffff")
         root.config(cursor="")
 
@@ -684,12 +677,12 @@ def show_home():
                                      justify="center")
 
         def on_enter(event, k=key, img=image_id):
-            if settings.get("effects", True):
+            if True:
                 canvas.itemconfig(img, image=large_icons[k])
             root.config(cursor="hand2")
 
         def on_leave(event, k=key, img=image_id):
-            if settings.get("effects", True):
+            if True:
                 canvas.itemconfig(img, image=normal_icons[k])
             root.config(cursor="")
 
@@ -720,11 +713,8 @@ def show_settings():
     settings_items = [
         ("🔐", "#2f7df6", "الحساب والأمان", "تغيير اسم المستخدم وكلمة المرور وإعدادات الأمان", "account"),
         ("🎨", "#8d3ff2", "تخصيص الواجهة", "تغيير الخلفية والألوان والخطوط والمظهر العام", "customize"),
-        ("🖨", "#55b72c", "الطباعة", "إعدادات الطابعة ومعاينة قبل الطباعة", "printer"),
         ("📄", "#ff8a18", "إدارة الوثائق", "إعدادات حفظ الوثائق والقوالب والتنسيقات", "documents_settings"),
         ("🛡", "#25b7b1", "النسخ الاحتياطي والحماية", "النسخ الاحتياطي واسترجاع البيانات وإعدادات الحماية", "backup"),
-        ("👥", "#e03c78", "قاعدة بيانات الزبائن", "إعدادات قاعدة البيانات والبحث والتصدير والاستيراد", "clients_db"),
-        ("⚡", "#ffcf00", "الذكاء والسرعة", "الخيارات الذكية والاختصارات والاقتراحات", "smart"),
         ("ℹ", "#2da7ff", "معلومات البرنامج", "معلومات الإصدار والتحديثات والمطور", "info"),
     ]
 
@@ -733,14 +723,8 @@ def show_settings():
             show_customize()
         elif k == "account":
             show_account_security()
-        elif k == "printer":
-            show_printer_settings()
-        elif k == "clients_db":
-            show_clients_database()
         elif k == "backup":
             show_backup_settings()
-        elif k == "smart":
-            show_smart_speed()
         else:
             show_setting_placeholder(k)
 
@@ -846,15 +830,13 @@ def show_customize():
 
     current_theme = "الوضع الفاتح" if settings.get("theme") == "light" else "الوضع الليلي"
     current_font = {"small": "صغير", "medium": "متوسط", "large": "كبير"}.get(settings.get("font_size"), "متوسط")
-    effects_status = "مفعلة" if settings.get("effects", True) else "معطلة"
+    effects_status = "مفعلة" if True else "معطلة"
 
     customize_items = [
         ("🖼", "#2f7df6", "تغيير صورة الخلفية", "اختر صورة من الحاسوب واستعملها كخلفية للبرنامج", "change_bg"),
         ("🌙", "#8d3ff2", "الوضع الليلي / الفاتح", f"الوضع الحالي: {current_theme}", "toggle_theme"),
         ("🎨", get_accent(), "اللون الرئيسي", "اختيار لون الأزرار والعناصر النشطة داخل البرنامج", "accent_color"),
         ("🔠", "#22c55e", "حجم الخط", f"الحجم الحالي: {current_font}", "font_size"),
-        ("✨", "#facc15", "التأثيرات البصرية", f"الحالة الحالية: {'مفعلة' if settings.get('effects', True) else 'معطلة'}", "effects"),
-        ("♻", "#ff8a18", "إعادة ضبط المصنع", "إرجاع إعدادات الواجهة إلى الوضع الافتراضي دون حذف البيانات", "factory_reset"),
     ]
 
     def click_customize(k):
@@ -866,10 +848,6 @@ def show_customize():
             show_accent_colors()
         elif k == "font_size":
             show_font_sizes()
-        elif k == "effects":
-            toggle_effects()
-        elif k == "factory_reset":
-            reset_factory()
 
     draw_list(customize_items, click_customize)
 
@@ -918,12 +896,12 @@ def show_accent_colors():
                                    fill=theme["muted"], font=("Arial", 38, "bold"))
 
         def enter(event, c=card):
-            if settings.get("effects", True):
+            if True:
                 canvas.itemconfig(c, fill=theme["card_hover"])
             root.config(cursor="hand2")
 
         def leave(event, c=card):
-            if settings.get("effects", True):
+            if True:
                 canvas.itemconfig(c, fill=theme["card"])
             root.config(cursor="")
 
@@ -973,12 +951,12 @@ def show_font_sizes():
                                   fill=theme["text"], font=("Arial", fonts["menu"], "bold"))
 
         def enter(event, c=card):
-            if settings.get("effects", True):
+            if True:
                 canvas.itemconfig(c, fill=theme["card_hover"])
             root.config(cursor="hand2")
 
         def leave(event, c=card):
-            if settings.get("effects", True):
+            if True:
                 canvas.itemconfig(c, fill=theme["card"])
             root.config(cursor="")
 
@@ -1006,7 +984,6 @@ def show_account_security():
     account_items = [
         ("👤", "#2f7df6", "تغيير اسم المستخدم", "تعديل اسم المستخدم الذي تستعمله للدخول إلى البرنامج", "change_username"),
         ("🔑", "#8d3ff2", "تغيير كلمة المرور", "تحديث كلمة مرور الدخول وحماية البرنامج", "change_password"),
-        ("🔒", "#55b72c", "قفل البرنامج", "إغلاق الوصول إلى البرنامج حتى يتم إدخال كلمة المرور", "lock_app"),
         ("♻", "#ff8a18", "إعادة ضبط بيانات الدخول", "إرجاع اسم المستخدم وكلمة المرور إلى القيم الافتراضية", "reset_login"),
     ]
 
@@ -1486,12 +1463,12 @@ def draw_backup_list(backups, action_text, action_command):
         )
 
         def enter(event, c=card):
-            if settings.get("effects", True):
+            if True:
                 canvas.itemconfig(c, fill=theme["card_hover"])
             root.config(cursor="hand2")
 
         def leave(event, c=card):
-            if settings.get("effects", True):
+            if True:
                 canvas.itemconfig(c, fill=theme["card"])
             root.config(cursor="")
 
@@ -1712,12 +1689,12 @@ def show_clients_list():
         )
 
         def enter(event, c=card):
-            if settings.get("effects", True):
+            if True:
                 canvas.itemconfig(c, fill=theme["card_hover"])
             root.config(cursor="hand2")
 
         def leave(event, c=card):
-            if settings.get("effects", True):
+            if True:
                 canvas.itemconfig(c, fill=theme["card"])
             root.config(cursor="")
 
@@ -1758,12 +1735,12 @@ def draw_client_card(client, y1, action_text="", action_command=None):
             canvas.tag_bind(item, "<Button-1>", action_click)
 
     def enter(event):
-        if settings.get("effects", True):
+        if True:
             canvas.itemconfig(card, fill=theme["card_hover"])
         root.config(cursor="hand2")
 
     def leave(event):
-        if settings.get("effects", True):
+        if True:
             canvas.itemconfig(card, fill=theme["card"])
         root.config(cursor="")
 
@@ -1995,8 +1972,6 @@ def show_setting_placeholder(key):
     titles = {
         "documents_settings": "إدارة الوثائق",
         "backup": "النسخ الاحتياطي والحماية",
-        "clients_db": "قاعدة بيانات الزبائن",
-        "smart": "الذكاء والسرعة",
         "info": "معلومات البرنامج",
     }
 
@@ -2046,12 +2021,12 @@ def show_setting_placeholder(key):
                                             anchor="w")
 
             def enter(event, c=card):
-                if settings.get("effects", True):
+                if True:
                     canvas.itemconfig(c, fill=theme["card_hover"])
                 root.config(cursor="hand2")
 
             def leave(event, c=card):
-                if settings.get("effects", True):
+                if True:
                     canvas.itemconfig(c, fill=theme["card"])
                 root.config(cursor="")
 
@@ -2115,12 +2090,12 @@ def draw_back_button(command):
                              font=("Arial", fonts["button"], "bold"))
 
     def enter(event):
-        if settings.get("effects", True):
+        if True:
             canvas.itemconfig(btn, fill=theme["button_hover"])
         root.config(cursor="hand2")
 
     def leave(event):
-        if settings.get("effects", True):
+        if True:
             canvas.itemconfig(btn, fill=theme["button"])
         root.config(cursor="")
 
@@ -2151,10 +2126,6 @@ def on_resize(event):
             show_font_sizes()
         elif current_page == "account":
             show_account_security()
-        elif current_page == "printer":
-            show_printer_settings()
-        elif current_page == "printer_name":
-            show_printer_name_form()
         elif current_page == "backup":
             show_backup_settings()
         elif current_page == "restore_backup":
@@ -2165,12 +2136,8 @@ def on_resize(event):
             show_latest_backup_info()
         elif current_page == "backup_path":
             show_backup_path_info()
-        elif current_page == "smart":
-            show_smart_speed()
-        elif current_page in ["change_username", "change_password", "lock_app", "reset_login"]:
+        elif current_page in ["change_username", "change_password", "reset_login"]:
             show_account_form(current_page)
-        elif current_page == "clients_db":
-            show_clients_database()
         elif current_page == "add_client":
             show_add_client_form()
         elif current_page == "clients_list":
