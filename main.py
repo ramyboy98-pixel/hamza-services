@@ -5,6 +5,7 @@ import os
 import sys
 import shutil
 import json
+import backup_system
 
 
 def resource_path(relative_path):
@@ -685,6 +686,8 @@ def show_settings():
             show_printer_settings()
         elif k == "clients_db":
             show_clients_database()
+        elif k == "backup":
+            show_backup_settings()
         else:
             show_setting_placeholder(k)
 
@@ -1091,6 +1094,321 @@ def show_account_form(key):
 
         root.after(1000, show_login)
 
+
+
+
+def show_backup_settings():
+    global current_page
+    clear_entries()
+    current_page = "backup"
+    canvas.delete("all")
+
+    width = root.winfo_width()
+    height = root.winfo_height()
+
+    draw_background(width, height)
+    draw_top_back("النسخ الاحتياطي والحماية", show_settings)
+
+    latest_backup = backup_system.get_latest_backup()
+
+    backup_items = [
+        ("💾", "#2f7df6", "إنشاء نسخة احتياطية", "حفظ نسخة من الإعدادات وقاعدة بيانات الزبائن", "create_backup"),
+        ("📂", "#8d3ff2", "استرجاع نسخة احتياطية", "استرجاع بيانات محفوظة سابقًا", "restore_backup"),
+        ("🕒", "#22c55e", "آخر نسخة محفوظة", latest_backup, "latest_backup"),
+        ("🗑", "#ef4444", "حذف النسخ القديمة", "عرض النسخ الاحتياطية وحذف غير المرغوب منها", "delete_backup"),
+        ("📁", "#ff8a18", "مسار الحفظ", backup_system.BACKUP_DIR, "backup_path"),
+    ]
+
+    def click_backup(k):
+        if k == "create_backup":
+            create_backup_action()
+        elif k == "restore_backup":
+            show_restore_backup_list()
+        elif k == "delete_backup":
+            show_delete_backup_list()
+        elif k == "latest_backup":
+            show_latest_backup_info()
+        elif k == "backup_path":
+            show_backup_path_info()
+
+    draw_list(backup_items, click_backup)
+
+
+def create_backup_action():
+    try:
+        backup_path = backup_system.create_backup()
+        messagebox.showinfo("تم", f"تم إنشاء نسخة احتياطية بنجاح:\n{backup_path}")
+        show_backup_settings()
+    except Exception as e:
+        messagebox.showerror("خطأ", f"فشل إنشاء النسخة الاحتياطية:\n{e}")
+
+
+def show_restore_backup_list():
+    global current_page
+    clear_entries()
+    current_page = "restore_backup"
+    canvas.delete("all")
+
+    theme = get_theme()
+    fonts = get_fonts()
+    width = root.winfo_width()
+    height = root.winfo_height()
+
+    draw_background(width, height)
+    draw_top_back("استرجاع نسخة احتياطية", show_backup_settings)
+
+    backups = backup_system.list_backups()
+
+    if not backups:
+        canvas.create_text(
+            width // 2,
+            300,
+            text="لا توجد نسخ احتياطية للاسترجاع.",
+            fill=theme["muted"],
+            font=("Arial", fonts["subtitle"], "bold")
+        )
+        return
+
+    canvas.create_text(
+        width // 2,
+        135,
+        text="اختر النسخة التي تريد استرجاعها",
+        fill=theme["muted"],
+        font=("Arial", fonts["normal"], "bold")
+    )
+
+    draw_backup_list(backups[:6], "استرجاع", restore_backup_action)
+
+
+def restore_backup_action(backup_name):
+    answer = messagebox.askyesno(
+        "تأكيد الاسترجاع",
+        f"هل تريد استرجاع النسخة التالية؟\n{backup_name}\n\nسيتم استبدال الإعدادات وقاعدة الزبائن الحالية."
+    )
+
+    if not answer:
+        return
+
+    try:
+        ok = backup_system.restore_backup(backup_name)
+
+        if ok:
+            messagebox.showinfo("تم", "تم استرجاع النسخة الاحتياطية بنجاح.\nأعد تشغيل البرنامج إذا لم تظهر البيانات مباشرة.")
+            show_backup_settings()
+        else:
+            messagebox.showerror("خطأ", "لم يتم العثور على النسخة الاحتياطية.")
+    except Exception as e:
+        messagebox.showerror("خطأ", f"فشل الاسترجاع:\n{e}")
+
+
+def show_delete_backup_list():
+    global current_page
+    clear_entries()
+    current_page = "delete_backup"
+    canvas.delete("all")
+
+    theme = get_theme()
+    fonts = get_fonts()
+    width = root.winfo_width()
+    height = root.winfo_height()
+
+    draw_background(width, height)
+    draw_top_back("حذف النسخ القديمة", show_backup_settings)
+
+    backups = backup_system.list_backups()
+
+    if not backups:
+        canvas.create_text(
+            width // 2,
+            300,
+            text="لا توجد نسخ احتياطية للحذف.",
+            fill=theme["muted"],
+            font=("Arial", fonts["subtitle"], "bold")
+        )
+        return
+
+    canvas.create_text(
+        width // 2,
+        135,
+        text="اختر النسخة التي تريد حذفها",
+        fill=theme["muted"],
+        font=("Arial", fonts["normal"], "bold")
+    )
+
+    draw_backup_list(backups[:6], "حذف", delete_backup_action)
+
+
+def delete_backup_action(backup_name):
+    answer = messagebox.askyesno(
+        "تأكيد الحذف",
+        f"هل تريد حذف النسخة التالية؟\n{backup_name}"
+    )
+
+    if not answer:
+        return
+
+    try:
+        ok = backup_system.delete_backup(backup_name)
+
+        if ok:
+            messagebox.showinfo("تم", "تم حذف النسخة الاحتياطية.")
+            show_backup_settings()
+        else:
+            messagebox.showerror("خطأ", "لم يتم العثور على النسخة الاحتياطية.")
+    except Exception as e:
+        messagebox.showerror("خطأ", f"فشل الحذف:\n{e}")
+
+
+def show_latest_backup_info():
+    global current_page
+    clear_entries()
+    current_page = "latest_backup"
+    canvas.delete("all")
+
+    theme = get_theme()
+    fonts = get_fonts()
+    width = root.winfo_width()
+    height = root.winfo_height()
+
+    draw_background(width, height)
+    draw_top_back("آخر نسخة محفوظة", show_backup_settings)
+
+    latest = backup_system.get_latest_backup()
+
+    canvas.create_text(
+        width // 2,
+        255,
+        text="آخر نسخة احتياطية:",
+        fill=theme["text"],
+        font=("Arial", fonts["subtitle"], "bold")
+    )
+
+    canvas.create_text(
+        width // 2,
+        320,
+        text=latest,
+        fill=theme["muted"],
+        font=("Arial", fonts["normal"] + 2)
+    )
+
+
+def show_backup_path_info():
+    global current_page
+    clear_entries()
+    current_page = "backup_path"
+    canvas.delete("all")
+
+    theme = get_theme()
+    fonts = get_fonts()
+    width = root.winfo_width()
+    height = root.winfo_height()
+
+    draw_background(width, height)
+    draw_top_back("مسار حفظ النسخ الاحتياطية", show_backup_settings)
+
+    canvas.create_text(
+        width // 2,
+        255,
+        text="يتم حفظ النسخ الاحتياطية داخل:",
+        fill=theme["text"],
+        font=("Arial", fonts["subtitle"], "bold")
+    )
+
+    canvas.create_text(
+        width // 2,
+        320,
+        text=backup_system.BACKUP_DIR,
+        fill=theme["muted"],
+        font=("Arial", fonts["normal"]),
+        width=int(width * 0.75)
+    )
+
+
+def draw_backup_list(backups, action_text, action_command):
+    theme = get_theme()
+    fonts = get_fonts()
+    width = root.winfo_width()
+
+    x1 = int(width * 0.14)
+    x2 = int(width * 0.86)
+    start_y = 175
+    row_h = 74
+    gap = 10
+
+    for index, backup_name in enumerate(backups):
+        y1 = start_y + index * (row_h + gap)
+        y2 = y1 + row_h
+
+        card = canvas.create_rectangle(
+            x1, y1, x2, y2,
+            fill=theme["card"],
+            outline=theme["border"],
+            width=1
+        )
+
+        icon_bg = canvas.create_rectangle(
+            x1 + 25,
+            y1 + 13,
+            x1 + 77,
+            y1 + 61,
+            fill="#25b7b1",
+            outline="#25b7b1"
+        )
+
+        icon = canvas.create_text(
+            x1 + 51,
+            y1 + 37,
+            text="💾",
+            fill="white",
+            font=("Arial", 21, "bold")
+        )
+
+        name_text = canvas.create_text(
+            x1 + 110,
+            y1 + 37,
+            text=backup_name,
+            fill=theme["text"],
+            font=("Arial", fonts["button"], "bold"),
+            anchor="w"
+        )
+
+        action_btn = canvas.create_rectangle(
+            x2 - 150,
+            y1 + 18,
+            x2 - 35,
+            y1 + 56,
+            fill=theme["accent"],
+            outline=theme["accent"],
+            width=1
+        )
+
+        action_label = canvas.create_text(
+            x2 - 92,
+            y1 + 37,
+            text=action_text,
+            fill="black",
+            font=("Arial", fonts["small"] + 2, "bold")
+        )
+
+        def enter(event, c=card):
+            if settings.get("effects", True):
+                canvas.itemconfig(c, fill=theme["card_hover"])
+            root.config(cursor="hand2")
+
+        def leave(event, c=card):
+            if settings.get("effects", True):
+                canvas.itemconfig(c, fill=theme["card"])
+            root.config(cursor="")
+
+        def click(event, b=backup_name):
+            action_command(b)
+
+        for item in (card, icon_bg, icon, name_text, action_btn, action_label):
+            canvas.tag_bind(item, "<Enter>", enter)
+            canvas.tag_bind(item, "<Leave>", leave)
+
+        for item in (action_btn, action_label):
+            canvas.tag_bind(item, "<Button-1>", click)
 
 
 def show_clients_database():
@@ -1742,6 +2060,16 @@ def on_resize(event):
             show_printer_settings()
         elif current_page == "printer_name":
             show_printer_name_form()
+        elif current_page == "backup":
+            show_backup_settings()
+        elif current_page == "restore_backup":
+            show_restore_backup_list()
+        elif current_page == "delete_backup":
+            show_delete_backup_list()
+        elif current_page == "latest_backup":
+            show_latest_backup_info()
+        elif current_page == "backup_path":
+            show_backup_path_info()
         elif current_page in ["change_username", "change_password", "lock_app", "reset_login"]:
             show_account_form(current_page)
         elif current_page == "clients_db":
@@ -1762,7 +2090,7 @@ def on_resize(event):
             show_clients_stats()
         elif current_page in ["export_clients"]:
             show_clients_placeholder(current_page)
-        elif current_page in ["documents_settings", "backup", "smart", "info"]:
+        elif current_page in ["documents_settings", "smart", "info"]:
             show_setting_placeholder(current_page)
         else:
             show_placeholder(current_page)
