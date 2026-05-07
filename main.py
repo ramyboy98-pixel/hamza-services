@@ -1122,6 +1122,14 @@ def show_clients_database():
             show_add_client_form()
         elif k == "clients_list":
             show_clients_list()
+        elif k == "search_client":
+            show_search_client()
+        elif k == "edit_client":
+            show_edit_client_select()
+        elif k == "delete_client":
+            show_delete_client_select()
+        elif k == "clients_stats":
+            show_clients_stats()
         else:
             show_clients_placeholder(k)
 
@@ -1310,6 +1318,220 @@ def show_clients_list():
         fill=theme["muted"],
         font=("Arial", fonts["small"] + 1)
     )
+
+def draw_client_card(client, y1, action_text="", action_command=None):
+    theme = get_theme()
+    fonts = get_fonts()
+    width = root.winfo_width()
+    x1 = int(width * 0.10)
+    x2 = int(width * 0.90)
+    y2 = y1 + 72
+
+    card = canvas.create_rectangle(x1, y1, x2, y2, fill=theme["card"], outline=theme["border"], width=1)
+    icon_bg = canvas.create_rectangle(x1 + 25, y1 + 12, x1 + 75, y1 + 60, fill="#8d3ff2", outline="#8d3ff2")
+    icon = canvas.create_text(x1 + 50, y1 + 36, text="👤", fill="white", font=("Arial", 21, "bold"))
+    name_text = canvas.create_text(x1 + 105, y1 + 24, text=client.get("full_name", ""), fill=theme["text"], font=("Arial", fonts["button"], "bold"), anchor="w")
+    info = f"الهاتف: {client.get('phone', '')}   |   العنوان: {client.get('address', '')}"
+    info_text = canvas.create_text(x1 + 105, y1 + 52, text=info, fill=theme["muted"], font=("Arial", fonts["small"]), anchor="w")
+    items = [card, icon_bg, icon, name_text, info_text]
+
+    if action_text and action_command:
+        action_btn = canvas.create_rectangle(x2 - 160, y1 + 18, x2 - 35, y1 + 54, fill=theme["accent"], outline=theme["accent"], width=1)
+        action_label = canvas.create_text(x2 - 98, y1 + 36, text=action_text, fill="black", font=("Arial", fonts["small"] + 2, "bold"))
+        items.extend([action_btn, action_label])
+        def action_click(event, c=client):
+            action_command(c)
+        for item in (action_btn, action_label):
+            canvas.tag_bind(item, "<Button-1>", action_click)
+
+    def enter(event):
+        if settings.get("effects", True):
+            canvas.itemconfig(card, fill=theme["card_hover"])
+        root.config(cursor="hand2")
+
+    def leave(event):
+        if settings.get("effects", True):
+            canvas.itemconfig(card, fill=theme["card"])
+        root.config(cursor="")
+
+    for item in items:
+        canvas.tag_bind(item, "<Enter>", enter)
+        canvas.tag_bind(item, "<Leave>", leave)
+
+
+def show_search_client():
+    global current_page
+    clear_entries()
+    current_page = "search_client"
+    canvas.delete("all")
+    theme = get_theme()
+    fonts = get_fonts()
+    width = root.winfo_width()
+    height = root.winfo_height()
+    draw_background(width, height)
+    draw_top_back("البحث عن زبون", show_clients_database)
+
+    canvas.create_text(width // 2, 180, text="اكتب الاسم أو رقم الهاتف أو العنوان", fill=theme["text"], font=("Arial", fonts["subtitle"], "bold"))
+    search_entry = tk.Entry(root, font=("Arial", fonts["normal"] + 2), justify="center", bd=0)
+    entry_widgets.append(search_entry)
+    canvas.create_window(width // 2, 235, window=search_entry, width=470, height=45)
+
+    def perform_search(event=None):
+        query = search_entry.get().strip().lower()
+        clear_entries()
+        canvas.delete("all")
+        draw_background(width, height)
+        draw_top_back("نتائج البحث", show_clients_database)
+
+        if not query:
+            canvas.create_text(width // 2, 300, text="اكتب كلمة للبحث.", fill=theme["muted"], font=("Arial", fonts["subtitle"], "bold"))
+            return
+
+        results = []
+        for client in clients_data:
+            text = " ".join([str(client.get("full_name", "")), str(client.get("phone", "")), str(client.get("address", "")), str(client.get("notes", ""))]).lower()
+            if query in text:
+                results.append(client)
+
+        if not results:
+            canvas.create_text(width // 2, 300, text="لم يتم العثور على زبون مطابق.", fill=theme["muted"], font=("Arial", fonts["subtitle"], "bold"))
+            return
+
+        canvas.create_text(width // 2, 135, text=f"عدد النتائج: {len(results)}", fill=theme["muted"], font=("Arial", fonts["normal"], "bold"))
+        for index, client in enumerate(results[:6]):
+            draw_client_card(client, 175 + index * 82)
+
+    draw_save_button("بحث", 300, perform_search)
+    search_entry.bind("<Return>", perform_search)
+
+
+def show_edit_client_select():
+    global current_page
+    clear_entries()
+    current_page = "edit_client"
+    canvas.delete("all")
+    theme = get_theme()
+    fonts = get_fonts()
+    width = root.winfo_width()
+    height = root.winfo_height()
+    draw_background(width, height)
+    draw_top_back("تعديل بيانات زبون", show_clients_database)
+
+    if not clients_data:
+        canvas.create_text(width // 2, 300, text="لا يوجد زبائن لتعديلهم.", fill=theme["muted"], font=("Arial", fonts["subtitle"], "bold"))
+        return
+
+    canvas.create_text(width // 2, 135, text="اختر الزبون الذي تريد تعديل بياناته", fill=theme["muted"], font=("Arial", fonts["normal"], "bold"))
+    for index, client in enumerate(clients_data[-6:]):
+        draw_client_card(client, 170 + index * 82, "تعديل", show_edit_client_form)
+
+
+def show_edit_client_form(client):
+    global current_page
+    clear_entries()
+    current_page = "edit_client_form"
+    canvas.delete("all")
+    theme = get_theme()
+    fonts = get_fonts()
+    width = root.winfo_width()
+    height = root.winfo_height()
+    draw_background(width, height)
+    draw_top_back("تعديل بيانات زبون", show_edit_client_select)
+
+    fields = [("الاسم الكامل", "full_name", 185), ("رقم الهاتف", "phone", 275), ("العنوان", "address", 365), ("ملاحظات", "notes", 455)]
+    entries = {}
+    for label, field_key, y in fields:
+        canvas.create_text(width // 2, y, text=label, fill=theme["text"], font=("Arial", fonts["normal"], "bold"))
+        entry = tk.Entry(root, font=("Arial", fonts["normal"]), justify="center", bd=0)
+        entry.insert(0, client.get(field_key, ""))
+        entry_widgets.append(entry)
+        entries[field_key] = entry
+        canvas.create_window(width // 2, y + 40, window=entry, width=460, height=42)
+
+    def save_edit():
+        full_name = entries["full_name"].get().strip()
+        if not full_name:
+            messagebox.showerror("خطأ", "اسم الزبون لا يمكن أن يكون فارغًا.")
+            return
+        for item in clients_data:
+            if item.get("id") == client.get("id"):
+                item["full_name"] = full_name
+                item["phone"] = entries["phone"].get().strip()
+                item["address"] = entries["address"].get().strip()
+                item["notes"] = entries["notes"].get().strip()
+                break
+        save_clients(clients_data)
+        refresh_clients_count()
+        messagebox.showinfo("تم", "تم تعديل بيانات الزبون بنجاح.")
+        show_clients_database()
+
+    draw_save_button("حفظ التعديل", 545, save_edit)
+
+
+def show_delete_client_select():
+    global current_page
+    clear_entries()
+    current_page = "delete_client"
+    canvas.delete("all")
+    theme = get_theme()
+    fonts = get_fonts()
+    width = root.winfo_width()
+    height = root.winfo_height()
+    draw_background(width, height)
+    draw_top_back("حذف زبون", show_clients_database)
+
+    if not clients_data:
+        canvas.create_text(width // 2, 300, text="لا يوجد زبائن لحذفهم.", fill=theme["muted"], font=("Arial", fonts["subtitle"], "bold"))
+        return
+
+    canvas.create_text(width // 2, 135, text="اختر الزبون الذي تريد حذفه", fill=theme["muted"], font=("Arial", fonts["normal"], "bold"))
+    for index, client in enumerate(clients_data[-6:]):
+        draw_client_card(client, 170 + index * 82, "حذف", delete_client)
+
+
+def delete_client(client):
+    answer = messagebox.askyesno("تأكيد الحذف", f"هل تريد حذف الزبون: {client.get('full_name', '')}؟")
+    if not answer:
+        return
+    global clients_data
+    clients_data = [item for item in clients_data if item.get("id") != client.get("id")]
+    save_clients(clients_data)
+    refresh_clients_count()
+    messagebox.showinfo("تم", "تم حذف الزبون بنجاح.")
+    show_clients_database()
+
+
+def show_clients_stats():
+    global current_page
+    clear_entries()
+    current_page = "clients_stats"
+    canvas.delete("all")
+    theme = get_theme()
+    fonts = get_fonts()
+    width = root.winfo_width()
+    height = root.winfo_height()
+    draw_background(width, height)
+    draw_top_back("إحصائيات الزبائن", show_clients_database)
+
+    total = len(clients_data)
+    with_phone = len([c for c in clients_data if c.get("phone", "").strip()])
+    with_address = len([c for c in clients_data if c.get("address", "").strip()])
+    stats_items = [("👥", "#2f7df6", "عدد الزبائن", str(total)), ("📞", "#22c55e", "زبائن لديهم رقم هاتف", str(with_phone)), ("🏠", "#8d3ff2", "زبائن لديهم عنوان", str(with_address))]
+
+    start_y = 190
+    x1 = int(width * 0.20)
+    x2 = int(width * 0.80)
+    row_h = 82
+    gap = 14
+    for index, (symbol, color, label, value) in enumerate(stats_items):
+        y1 = start_y + index * (row_h + gap)
+        y2 = y1 + row_h
+        canvas.create_rectangle(x1, y1, x2, y2, fill=theme["card"], outline=theme["border"], width=1)
+        canvas.create_rectangle(x1 + 25, y1 + 15, x1 + 80, y1 + 67, fill=color, outline=color)
+        canvas.create_text(x1 + 52, y1 + 41, text=symbol, fill="white", font=("Arial", 23, "bold"))
+        canvas.create_text(x1 + 115, y1 + 28, text=label, fill=theme["text"], font=("Arial", fonts["button"], "bold"), anchor="w")
+        canvas.create_text(x1 + 115, y1 + 58, text=value, fill=theme["muted"], font=("Arial", fonts["normal"]), anchor="w")
+
 
 def show_clients_placeholder(key):
     global current_page
@@ -1528,10 +1750,17 @@ def on_resize(event):
             show_add_client_form()
         elif current_page == "clients_list":
             show_clients_list()
-        elif current_page in [
-            "search_client", "edit_client", "delete_client",
-            "export_clients", "clients_stats"
-        ]:
+        elif current_page == "search_client":
+            show_search_client()
+        elif current_page == "edit_client":
+            show_edit_client_select()
+        elif current_page == "edit_client_form":
+            show_edit_client_select()
+        elif current_page == "delete_client":
+            show_delete_client_select()
+        elif current_page == "clients_stats":
+            show_clients_stats()
+        elif current_page in ["export_clients"]:
             show_clients_placeholder(current_page)
         elif current_page in ["documents_settings", "backup", "smart", "info"]:
             show_setting_placeholder(current_page)
