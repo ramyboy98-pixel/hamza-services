@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import filedialog, messagebox
-from PIL import Image, ImageTk
+from PIL import Image, ImageTk, ImageDraw
 import os
 import sys
 import shutil
@@ -152,7 +152,7 @@ def get_theme():
 
 
 root = tk.Tk()
-root.title("HAMZA SERVICES")
+root.title("IDARA DZ")
 root.geometry("1280x720")
 root.minsize(1000, 600)
 root.configure(bg="black")
@@ -333,7 +333,7 @@ def draw_top_back(title, back_command):
     canvas.create_text(
         35,
         28,
-        text="HAMZA SERVICES",
+        text="IDARA DZ",
         fill=theme["text"],
         font=("Arial", fonts["normal"], "bold"),
         anchor="w"
@@ -486,7 +486,7 @@ def show_login():
 
     center_x = width // 2
 
-    canvas.create_text(center_x, int(height * 0.19), text="Hamza services",
+    canvas.create_text(center_x, int(height * 0.19), text="IDARA DZ",
                        fill="black", font=("Segoe Script", fonts["title"] + 6, "bold"))
 
     canvas.create_text(center_x, int(height * 0.30), text="user name",
@@ -613,13 +613,13 @@ def show_forgot_password():
     draw_back_button(show_login)
 
 
+
 def show_home():
-    global current_page, normal_icons, large_icons
+    global current_page, background_photo
     clear_entries()
     current_page = "home"
     canvas.delete("all")
 
-    theme = get_theme()
     fonts = get_fonts()
 
     width = root.winfo_width()
@@ -628,66 +628,142 @@ def show_home():
     if width < 10 or height < 10:
         width, height = 1280, 720
 
-    draw_background(width, height)
+    left_w = int(width * 0.58)
+    right_x = left_w
 
-    canvas.create_text(width // 2, int(height * 0.12), text="HAMZA SERVICES",
-                       fill=theme["text"], font=("Arial", fonts["title"], "bold"))
+    canvas.create_rectangle(0, 0, left_w, height, fill="#f3eeee", outline="#f3eeee")
+    canvas.create_rectangle(right_x, 0, width, height, fill="#173b38", outline="#173b38")
 
-    normal_icons = {
-        "documents": load_icon("assets/documents.png", (145, 145)),
-        "electronic": load_icon("assets/electronic.png", (145, 145)),
-        "archive": load_icon("assets/archive.png", (145, 145)),
-        "settings": load_icon("assets/settings.png", (145, 145)),
-    }
+    canvas.create_text(
+        40,
+        32,
+        text="IDARA DZ",
+        fill="#173b38",
+        font=("Arial", max(13, fonts["normal"]), "bold"),
+        anchor="w"
+    )
 
-    large_icons = {
-        "documents": load_icon("assets/documents.png", (160, 160)),
-        "electronic": load_icon("assets/electronic.png", (160, 160)),
-        "archive": load_icon("assets/archive.png", (160, 160)),
-        "settings": load_icon("assets/settings.png", (160, 160)),
-    }
+    logo_cx = left_w // 2
+    logo_y = int(height * 0.17)
 
-    items = [
-        ("documents", "وثائق"),
-        ("electronic", "خدمات\nإلكترونية"),
-        ("archive", "أرشيف"),
-        ("settings", "إعدادات"),
+    canvas.create_arc(
+        logo_cx - 95,
+        logo_y - 5,
+        logo_cx + 95,
+        logo_y + 125,
+        start=20,
+        extent=140,
+        style="arc",
+        outline="#6f746e",
+        width=6
+    )
+
+    canvas.create_polygon(
+        logo_cx - 12,
+        logo_y + 10,
+        logo_cx + 10,
+        logo_y - 70,
+        logo_cx + 30,
+        logo_y + 120,
+        logo_cx - 7,
+        logo_y + 120,
+        fill="#173b38",
+        outline="#173b38"
+    )
+
+    canvas.create_text(
+        logo_cx,
+        logo_y + 175,
+        text="IDARA DZ",
+        fill="#173b38",
+        font=("Arial", fonts["title"] - 8, "bold")
+    )
+
+    img_x1 = int(left_w * 0.08)
+    img_y1 = int(height * 0.36)
+    img_x2 = int(left_w * 0.96)
+    img_y2 = int(height * 0.87)
+
+    try:
+        image_path = resource_path("assets/login_background.jpg")
+        if not os.path.exists(image_path):
+            image_path = resource_path("assets/background.jpg")
+
+        img = Image.open(image_path).convert("RGB")
+        img = img.resize((img_x2 - img_x1, img_y2 - img_y1), Image.LANCZOS)
+
+        mask = Image.new("L", img.size, 0)
+        draw = ImageDraw.Draw(mask)
+        draw.rounded_rectangle((0, 0, img.size[0], img.size[1]), radius=42, fill=255)
+
+        rounded = Image.new("RGBA", img.size, (0, 0, 0, 0))
+        rounded.paste(img.convert("RGBA"), (0, 0), mask)
+
+        background_photo = ImageTk.PhotoImage(rounded)
+        canvas.create_image(img_x1, img_y1, image=background_photo, anchor="nw")
+    except Exception:
+        canvas.create_rectangle(img_x1, img_y1, img_x2, img_y2, fill="#d8d2cc", outline="#d8d2cc")
+
+    footer_y = height - 35
+
+    canvas.create_text(45, footer_y, text="IDARA DZ", fill="#555555", font=("Arial", fonts["small"] + 1), anchor="w")
+    canvas.create_text(140, footer_y, text="|", fill="#777777", font=("Arial", fonts["small"] + 1))
+    canvas.create_text(190, footer_y, text="1.0.0", fill="#555555", font=("Arial", fonts["small"] + 1))
+    canvas.create_text(265, footer_y, text="|", fill="#777777", font=("Arial", fonts["small"] + 1))
+    canvas.create_text(335, footer_y, text="إصدار", fill="#555555", font=("Arial", fonts["small"] + 1))
+    canvas.create_text(470, footer_y, text="|", fill="#777777", font=("Arial", fonts["small"] + 1))
+    canvas.create_text(590, footer_y, text="جميع الحقوق محفوظة © 2026", fill="#555555", font=("Arial", fonts["small"] + 1))
+
+    menu_items = [
+        ("📄", "وثائق", "documents"),
+        ("🖥", "خدمات إلكترونية", "electronic"),
+        ("🗃", "أرشيف", "archive"),
+        ("ℹ", "حول البرنامج", "about_program"),
     ]
 
-    positions = [width * 0.20, width * 0.40, width * 0.60, width * 0.80]
-    icon_y = height * 0.43
-    text_y = height * 0.64
+    menu_center_x = right_x + (width - right_x) // 2
+    start_y = int(height * 0.31)
+    gap = int(height * 0.135)
 
-    for index, (key, label) in enumerate(items):
-        x = positions[index]
+    for index, (icon, label, key) in enumerate(menu_items):
+        y = start_y + index * gap
 
-        image_id = canvas.create_image(x, icon_y, image=normal_icons[key], anchor="center")
+        item_text = canvas.create_text(
+            menu_center_x,
+            y,
+            text=f"{icon}  {label}",
+            fill="#f4f4f4",
+            font=("Arial", fonts["menu"] - 2, "bold"),
+            anchor="center"
+        )
 
-        text_id = canvas.create_text(x, text_y, text=label,
-                                     fill=theme["text"],
-                                     font=("Arial", fonts["menu"], "bold"),
-                                     justify="center")
+        if index < len(menu_items) - 1:
+            canvas.create_line(
+                right_x + 70,
+                y + int(gap * 0.43),
+                width - 70,
+                y + int(gap * 0.43),
+                fill="#8aa09c",
+                width=1
+            )
 
-        def on_enter(event, k=key, img=image_id):
-            if True:
-                canvas.itemconfig(img, image=large_icons[k])
+        def on_enter(event, item=item_text):
+            canvas.itemconfig(item, fill=get_accent())
             root.config(cursor="hand2")
 
-        def on_leave(event, k=key, img=image_id):
-            if True:
-                canvas.itemconfig(img, image=normal_icons[k])
+        def on_leave(event, item=item_text):
+            canvas.itemconfig(item, fill="#f4f4f4")
             root.config(cursor="")
 
         def on_click(event, k=key):
-            if k == "settings":
-                show_settings()
+            if k == "about_program":
+                show_setting_placeholder("info")
             else:
                 show_placeholder(k)
 
-        for item in (image_id, text_id):
-            canvas.tag_bind(item, "<Enter>", on_enter)
-            canvas.tag_bind(item, "<Leave>", on_leave)
-            canvas.tag_bind(item, "<Button-1>", on_click)
+        canvas.tag_bind(item_text, "<Enter>", on_enter)
+        canvas.tag_bind(item_text, "<Leave>", on_leave)
+        canvas.tag_bind(item_text, "<Button-1>", on_click)
 
 
 def show_settings():
@@ -2001,7 +2077,7 @@ def show_setting_placeholder(key):
     }
 
     title = titles.get(key, "قسم الإعدادات")
-    draw_top_back(title, show_settings)
+    draw_top_back(title, show_home)
 
     if key == "info":
         info_items = [
