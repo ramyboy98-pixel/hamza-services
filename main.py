@@ -25,10 +25,12 @@ background_photo = None
 current_page = "home"
 
 
-def draw_full_background(width, height):
-    global background_photo
+def clear_screen():
+    canvas.delete("all")
 
-    path = resource_path("assets/background.jpg")
+
+def draw_image(path, width, height):
+    global background_photo
 
     if os.path.exists(path):
         img = Image.open(path).convert("RGB")
@@ -38,10 +40,6 @@ def draw_full_background(width, height):
 
     background_photo = ImageTk.PhotoImage(img)
     canvas.create_image(0, 0, image=background_photo, anchor="nw")
-
-
-def clear_screen():
-    canvas.delete("all")
 
 
 def show_home():
@@ -55,7 +53,7 @@ def show_home():
     if width < 10 or height < 10:
         width, height = 1280, 720
 
-    draw_full_background(width, height)
+    draw_image(resource_path("assets/background.jpg"), width, height)
 
     right_x = int(width * 0.58)
     menu_center_x = right_x + (width - right_x) // 2
@@ -112,9 +110,6 @@ def show_home():
 
 
 def draw_back_button(command):
-    width = root.winfo_width()
-    height = root.winfo_height()
-
     btn = canvas.create_rectangle(
         35,
         35,
@@ -161,7 +156,7 @@ def show_section(section):
     if width < 10 or height < 10:
         width, height = 1280, 720
 
-    draw_full_background(width, height)
+    draw_image(resource_path("assets/background.jpg"), width, height)
 
     titles = {
         "documents": "وثائق",
@@ -209,43 +204,7 @@ def show_about():
     if width < 10 or height < 10:
         width, height = 1280, 720
 
-    draw_full_background(width, height)
-
-    canvas.create_rectangle(
-        int(width * 0.16),
-        int(height * 0.18),
-        int(width * 0.84),
-        int(height * 0.78),
-        fill="#173b38",
-        outline="#d7c28a",
-        width=2
-    )
-
-    canvas.create_text(
-        width // 2,
-        int(height * 0.28),
-        text="حول البرنامج",
-        fill="#f4f4f4",
-        font=("Arial", 42, "bold")
-    )
-
-    about_text = (
-        "IDARA DZ\n\n"
-        "برنامج مكتبي مخصص لتنظيم خدمات المكتبة والخدمات الإدارية.\n"
-        "يساعد على تسيير الوثائق، الخدمات الإلكترونية، والأرشيف بطريقة سهلة ومنظمة.\n\n"
-        "الإصدار: 1.0.0\n"
-        "© 2026"
-    )
-
-    canvas.create_text(
-        width // 2,
-        int(height * 0.50),
-        text=about_text,
-        fill="#e8e1d5",
-        font=("Arial", 22, "bold"),
-        justify="center",
-        width=int(width * 0.58)
-    )
+    draw_image(resource_path("assets/about.jpg"), width, height)
 
     draw_back_button(show_home)
 
