@@ -25,7 +25,8 @@ DEFAULT_SETTINGS = {
     "background": "",
     "theme": "dark",
     "accent_color": "#ffa51f",
-    "font_size": "medium"
+    "font_size": "medium",
+    "effects": True
 }
 
 ACCENT_COLORS = {
@@ -236,11 +237,18 @@ def set_font_size(size):
     show_font_sizes()
 
 
+def toggle_effects():
+    settings["effects"] = not settings.get("effects", True)
+    save_settings(settings)
+    show_customize()
+
+
 def reset_factory():
     settings["background"] = ""
     settings["theme"] = "dark"
     settings["accent_color"] = "#ffa51f"
     settings["font_size"] = "medium"
+    settings["effects"] = True
     save_settings(settings)
     messagebox.showinfo("تم", "تمت إعادة ضبط إعدادات الواجهة.")
     show_customize()
@@ -287,11 +295,13 @@ def draw_top_back(title, back_command):
     )
 
     def enter(event):
-        canvas.itemconfig(back_box, fill=theme["button_hover"])
+        if settings.get("effects", True):
+            canvas.itemconfig(back_box, fill=theme["button_hover"])
         root.config(cursor="hand2")
 
     def leave(event):
-        canvas.itemconfig(back_box, fill=theme["button"])
+        if settings.get("effects", True):
+            canvas.itemconfig(back_box, fill=theme["button"])
         root.config(cursor="")
 
     def click(event):
@@ -367,11 +377,13 @@ def draw_list(items, on_click_func):
         )
 
         def on_enter(event, c=card):
-            canvas.itemconfig(c, fill=theme["card_hover"])
+            if settings.get("effects", True):
+                canvas.itemconfig(c, fill=theme["card_hover"])
             root.config(cursor="hand2")
 
         def on_leave(event, c=card):
-            canvas.itemconfig(c, fill=theme["card"])
+            if settings.get("effects", True):
+                canvas.itemconfig(c, fill=theme["card"])
             root.config(cursor="")
 
         def click(event, k=key):
@@ -533,11 +545,13 @@ def show_login():
             canvas.itemconfig(error_text, text="اسم المستخدم أو كلمة المرور غير صحيحة")
 
     def forgot_enter(event):
-        canvas.itemconfig(forgot_text, fill=accent)
+        if settings.get("effects", True):
+            canvas.itemconfig(forgot_text, fill=accent)
         root.config(cursor="hand2")
 
     def forgot_leave(event):
-        canvas.itemconfig(forgot_text, fill="#ffffff")
+        if settings.get("effects", True):
+            canvas.itemconfig(forgot_text, fill="#ffffff")
         root.config(cursor="")
 
     def forgot_click(event):
@@ -706,11 +720,13 @@ def show_home():
         )
 
         def on_enter(event, k=key, img=image_id):
-            canvas.itemconfig(img, image=large_icons[k])
+            if settings.get("effects", True):
+                canvas.itemconfig(img, image=large_icons[k])
             root.config(cursor="hand2")
 
         def on_leave(event, k=key, img=image_id):
-            canvas.itemconfig(img, image=normal_icons[k])
+            if settings.get("effects", True):
+                canvas.itemconfig(img, image=normal_icons[k])
             root.config(cursor="")
 
         def on_click(event, k=key):
@@ -779,11 +795,14 @@ def show_customize():
         "large": "كبير"
     }.get(settings.get("font_size"), "متوسط")
 
+    effects_status = "مفعلة" if settings.get("effects", True) else "معطلة"
+
     customize_items = [
         ("🖼", "#2f7df6", "تغيير صورة الخلفية", "اختر صورة من الحاسوب واستعملها كخلفية للبرنامج", "change_bg"),
         ("🌙", "#8d3ff2", "الوضع الليلي / الفاتح", f"الوضع الحالي: {current_theme}", "toggle_theme"),
         ("🎨", get_accent(), "اللون الرئيسي", "اختيار لون الأزرار والعناصر النشطة داخل البرنامج", "accent_color"),
         ("🔠", "#22c55e", "حجم الخط", f"الحجم الحالي: {current_font}", "font_size"),
+        ("✨", "#facc15", "التأثيرات البصرية", f"الحالة الحالية: {effects_status}", "effects"),
         ("♻", "#ff8a18", "إعادة ضبط المصنع", "إرجاع إعدادات الواجهة إلى الوضع الافتراضي دون حذف البيانات", "factory_reset"),
     ]
 
@@ -796,6 +815,8 @@ def show_customize():
             show_accent_colors()
         elif k == "font_size":
             show_font_sizes()
+        elif k == "effects":
+            toggle_effects()
         elif k == "factory_reset":
             reset_factory()
 
@@ -873,11 +894,13 @@ def show_accent_colors():
         )
 
         def enter(event, c=card):
-            canvas.itemconfig(c, fill=theme["card_hover"])
+            if settings.get("effects", True):
+                canvas.itemconfig(c, fill=theme["card_hover"])
             root.config(cursor="hand2")
 
         def leave(event, c=card):
-            canvas.itemconfig(c, fill=theme["card"])
+            if settings.get("effects", True):
+                canvas.itemconfig(c, fill=theme["card"])
             root.config(cursor="")
 
         def click(event, chosen=color):
@@ -948,11 +971,13 @@ def show_font_sizes():
         )
 
         def enter(event, c=card):
-            canvas.itemconfig(c, fill=theme["card_hover"])
+            if settings.get("effects", True):
+                canvas.itemconfig(c, fill=theme["card_hover"])
             root.config(cursor="hand2")
 
         def leave(event, c=card):
-            canvas.itemconfig(c, fill=theme["card"])
+            if settings.get("effects", True):
+                canvas.itemconfig(c, fill=theme["card"])
             root.config(cursor="")
 
         def click(event, v=value):
@@ -1267,12 +1292,22 @@ def draw_back_button(command):
         font=("Arial", fonts["button"], "bold")
     )
 
+    def enter(event):
+        if settings.get("effects", True):
+            canvas.itemconfig(btn, fill=theme["button_hover"])
+        root.config(cursor="hand2")
+
+    def leave(event):
+        if settings.get("effects", True):
+            canvas.itemconfig(btn, fill=theme["button"])
+        root.config(cursor="")
+
     def click(event):
         command()
 
     for item in (btn, txt):
-        canvas.tag_bind(item, "<Enter>", lambda e: root.config(cursor="hand2"))
-        canvas.tag_bind(item, "<Leave>", lambda e: root.config(cursor=""))
+        canvas.tag_bind(item, "<Enter>", enter)
+        canvas.tag_bind(item, "<Leave>", leave)
         canvas.tag_bind(item, "<Button-1>", click)
 
 
