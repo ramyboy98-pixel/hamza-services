@@ -18,6 +18,7 @@ def resource_path(relative_path):
 APP_DATA_DIR = os.path.join(os.path.expanduser("~"), "HamzaServices")
 SETTINGS_FILE = os.path.join(APP_DATA_DIR, "settings.json")
 CUSTOM_BACKGROUND = os.path.join(APP_DATA_DIR, "background.jpg")
+CLIENTS_FILE = os.path.join(APP_DATA_DIR, "clients.json")
 
 DEFAULT_SETTINGS = {
     "username": "admin",
@@ -76,6 +77,38 @@ def load_settings():
 
 
 settings = load_settings()
+
+
+def load_clients():
+    if not os.path.exists(CLIENTS_FILE):
+        save_clients([])
+        return []
+
+    try:
+        with open(CLIENTS_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        if isinstance(data, list):
+            return data
+
+        return []
+    except:
+        save_clients([])
+        return []
+
+
+def save_clients(clients):
+    with open(CLIENTS_FILE, "w", encoding="utf-8") as f:
+        json.dump(clients, f, ensure_ascii=False, indent=4)
+
+
+clients_data = load_clients()
+
+
+def refresh_clients_count():
+    settings["clients_count"] = len(clients_data)
+    save_settings(settings)
+
 
 
 def get_fonts():
@@ -1085,10 +1118,198 @@ def show_clients_database():
     ]
 
     def click_clients(k):
-        show_clients_placeholder(k)
+        if k == "add_client":
+            show_add_client_form()
+        elif k == "clients_list":
+            show_clients_list()
+        else:
+            show_clients_placeholder(k)
 
     draw_list(clients_items, click_clients)
 
+
+
+def show_add_client_form():
+    global current_page, clients_data
+    clear_entries()
+    current_page = "add_client"
+    canvas.delete("all")
+
+    theme = get_theme()
+    fonts = get_fonts()
+    width = root.winfo_width()
+    height = root.winfo_height()
+
+    draw_background(width, height)
+    draw_top_back("إضافة زبون", show_clients_database)
+
+    fields = [
+        ("الاسم الكامل", 185),
+        ("رقم الهاتف", 275),
+        ("العنوان", 365),
+        ("ملاحظات", 455),
+    ]
+
+    entries = {}
+
+    for label, y in fields:
+        canvas.create_text(
+            width // 2,
+            y,
+            text=label,
+            fill=theme["text"],
+            font=("Arial", fonts["normal"], "bold")
+        )
+
+        entry = tk.Entry(
+            root,
+            font=("Arial", fonts["normal"]),
+            justify="center",
+            bd=0
+        )
+
+        entry_widgets.append(entry)
+        entries[label] = entry
+
+        canvas.create_window(
+            width // 2,
+            y + 40,
+            window=entry,
+            width=460,
+            height=42
+        )
+
+    def save_client():
+        full_name = entries["الاسم الكامل"].get().strip()
+        phone = entries["رقم الهاتف"].get().strip()
+        address = entries["العنوان"].get().strip()
+        notes = entries["ملاحظات"].get().strip()
+
+        if not full_name:
+            messagebox.showerror("خطأ", "اكتب اسم الزبون.")
+            return
+
+        client = {
+            "id": len(clients_data) + 1,
+            "full_name": full_name,
+            "phone": phone,
+            "address": address,
+            "notes": notes
+        }
+
+        clients_data.append(client)
+        save_clients(clients_data)
+        refresh_clients_count()
+
+        messagebox.showinfo("تم", "تمت إضافة الزبون بنجاح.")
+        show_clients_database()
+
+    draw_save_button("حفظ الزبون", 545, save_client)
+
+
+def show_clients_list():
+    global current_page
+    clear_entries()
+    current_page = "clients_list"
+    canvas.delete("all")
+
+    theme = get_theme()
+    fonts = get_fonts()
+    width = root.winfo_width()
+    height = root.winfo_height()
+
+    draw_background(width, height)
+    draw_top_back("قائمة الزبائن", show_clients_database)
+
+    if not clients_data:
+        canvas.create_text(
+            width // 2,
+            300,
+            text="لا يوجد زبائن مسجلون حاليًا.",
+            fill=theme["muted"],
+            font=("Arial", fonts["subtitle"], "bold")
+        )
+        return
+
+    x1 = int(width * 0.10)
+    x2 = int(width * 0.90)
+    start_y = 140
+    row_h = 72
+    gap = 8
+
+    visible_clients = clients_data[-6:]
+
+    for index, client in enumerate(visible_clients):
+        y1 = start_y + index * (row_h + gap)
+        y2 = y1 + row_h
+
+        card = canvas.create_rectangle(
+            x1,
+            y1,
+            x2,
+            y2,
+            fill=theme["card"],
+            outline=theme["border"],
+            width=1
+        )
+
+        icon_bg = canvas.create_rectangle(
+            x1 + 25,
+            y1 + 12,
+            x1 + 75,
+            y1 + 60,
+            fill="#8d3ff2",
+            outline="#8d3ff2"
+        )
+
+        canvas.create_text(
+            x1 + 50,
+            y1 + 36,
+            text="👤",
+            fill="white",
+            font=("Arial", 21, "bold")
+        )
+
+        canvas.create_text(
+            x1 + 105,
+            y1 + 24,
+            text=client.get("full_name", ""),
+            fill=theme["text"],
+            font=("Arial", fonts["button"], "bold"),
+            anchor="w"
+        )
+
+        info = f"الهاتف: {client.get('phone', '')}   |   العنوان: {client.get('address', '')}"
+
+        canvas.create_text(
+            x1 + 105,
+            y1 + 52,
+            text=info,
+            fill=theme["muted"],
+            font=("Arial", fonts["small"]),
+            anchor="w"
+        )
+
+        def enter(event, c=card):
+            if settings.get("effects", True):
+                canvas.itemconfig(c, fill=theme["card_hover"])
+            root.config(cursor="hand2")
+
+        def leave(event, c=card):
+            if settings.get("effects", True):
+                canvas.itemconfig(c, fill=theme["card"])
+            root.config(cursor="")
+
+        canvas.tag_bind(card, "<Enter>", enter)
+        canvas.tag_bind(card, "<Leave>", leave)
+
+    canvas.create_text(
+        width // 2,
+        height - 40,
+        text=f"عدد الزبائن المسجلين: {len(clients_data)}",
+        fill=theme["muted"],
+        font=("Arial", fonts["small"] + 1)
+    )
 
 def show_clients_placeholder(key):
     global current_page
@@ -1303,9 +1524,13 @@ def on_resize(event):
             show_account_form(current_page)
         elif current_page == "clients_db":
             show_clients_database()
+        elif current_page == "add_client":
+            show_add_client_form()
+        elif current_page == "clients_list":
+            show_clients_list()
         elif current_page in [
-            "add_client", "clients_list", "search_client", "edit_client",
-            "delete_client", "export_clients", "clients_stats"
+            "search_client", "edit_client", "delete_client",
+            "export_clients", "clients_stats"
         ]:
             show_clients_placeholder(current_page)
         elif current_page in ["documents_settings", "backup", "smart", "info"]:
