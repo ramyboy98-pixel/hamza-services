@@ -22,7 +22,8 @@ CUSTOM_BACKGROUND = os.path.join(APP_DATA_DIR, "background.jpg")
 DEFAULT_SETTINGS = {
     "username": "admin",
     "password": "1234",
-    "background": ""
+    "background": "",
+    "theme": "dark"
 }
 
 os.makedirs(APP_DATA_DIR, exist_ok=True)
@@ -52,6 +53,34 @@ def load_settings():
 
 
 settings = load_settings()
+
+
+def get_theme():
+    if settings.get("theme") == "light":
+        return {
+            "overlay": 95,
+            "card": "#f2f2f2",
+            "card_hover": "#ffffff",
+            "border": "#d0d0d0",
+            "text": "#111111",
+            "muted": "#444444",
+            "button": "#dddddd",
+            "button_hover": "#ffffff",
+            "accent": "#2f7df6"
+        }
+
+    return {
+        "overlay": 170,
+        "card": "#202024",
+        "card_hover": "#29292f",
+        "border": "#34343a",
+        "text": "#ffffff",
+        "muted": "#bdbdbd",
+        "button": "#404040",
+        "button_hover": "#555555",
+        "accent": "#2f7df6"
+    }
+
 
 root = tk.Tk()
 root.title("HAMZA SERVICES")
@@ -95,10 +124,12 @@ def get_background_path():
 def draw_background(width, height):
     global background_photo
 
+    theme = get_theme()
+
     bg = Image.open(get_background_path()).convert("RGB")
     bg = bg.resize((width, height), Image.LANCZOS)
 
-    dark_layer = Image.new("RGBA", (width, height), (0, 0, 0, 170))
+    dark_layer = Image.new("RGBA", (width, height), (0, 0, 0, theme["overlay"]))
     bg = bg.convert("RGBA")
     bg.alpha_composite(dark_layer)
 
@@ -110,7 +141,6 @@ def draw_login_background(width, height):
     global login_photo
 
     path = resource_path("assets/login_background.jpg")
-
     if not os.path.exists(path):
         path = resource_path("assets/background.jpg")
 
@@ -140,28 +170,43 @@ def change_background():
     show_customize()
 
 
+def set_theme(value):
+    settings["theme"] = value
+    save_settings(settings)
+    show_customize()
+
+
+def reset_factory():
+    settings["background"] = ""
+    settings["theme"] = "dark"
+    save_settings(settings)
+    messagebox.showinfo("تم", "تمت إعادة ضبط إعدادات الواجهة.")
+    show_customize()
+
+
 def draw_top_back(title, back_command):
+    theme = get_theme()
     width = root.winfo_width()
 
     canvas.create_text(
         35, 28,
         text="HAMZA SERVICES",
-        fill="#eeeeee",
+        fill=theme["text"],
         font=("Arial", 14, "bold"),
         anchor="w"
     )
 
     back_box = canvas.create_rectangle(
         35, 60, 125, 105,
-        fill="#242428",
-        outline="#34343a",
+        fill=theme["button"],
+        outline=theme["border"],
         width=1
     )
 
     back_text = canvas.create_text(
         80, 82,
         text="←  رجوع",
-        fill="white",
+        fill=theme["text"],
         font=("Arial", 16, "bold")
     )
 
@@ -169,16 +214,16 @@ def draw_top_back(title, back_command):
         width // 2,
         82,
         text=title,
-        fill="white",
+        fill=theme["text"],
         font=("Arial", 38, "bold")
     )
 
     def enter(event):
-        canvas.itemconfig(back_box, fill="#303036")
+        canvas.itemconfig(back_box, fill=theme["button_hover"])
         root.config(cursor="hand2")
 
     def leave(event):
-        canvas.itemconfig(back_box, fill="#242428")
+        canvas.itemconfig(back_box, fill=theme["button"])
         root.config(cursor="")
 
     def click(event):
@@ -191,6 +236,7 @@ def draw_top_back(title, back_command):
 
 
 def draw_list(items, on_click_func):
+    theme = get_theme()
     width = root.winfo_width()
 
     list_x1 = int(width * 0.10)
@@ -205,8 +251,8 @@ def draw_list(items, on_click_func):
 
         card = canvas.create_rectangle(
             list_x1, y1, list_x2, y2,
-            fill="#202024",
-            outline="#34343a",
+            fill=theme["card"],
+            outline=theme["border"],
             width=1
         )
 
@@ -229,7 +275,7 @@ def draw_list(items, on_click_func):
             list_x1 + 115,
             y1 + 25,
             text=title,
-            fill="white",
+            fill=theme["text"],
             font=("Arial", 19, "bold"),
             anchor="w"
         )
@@ -238,7 +284,7 @@ def draw_list(items, on_click_func):
             list_x1 + 115,
             y1 + 52,
             text=desc,
-            fill="#bdbdbd",
+            fill=theme["muted"],
             font=("Arial", 12),
             anchor="w"
         )
@@ -247,16 +293,16 @@ def draw_list(items, on_click_func):
             list_x2 - 38,
             y1 + 37,
             text="›",
-            fill="#cfcfcf",
+            fill=theme["muted"],
             font=("Arial", 42, "bold")
         )
 
         def on_enter(event, c=card):
-            canvas.itemconfig(c, fill="#29292f")
+            canvas.itemconfig(c, fill=theme["card_hover"])
             root.config(cursor="hand2")
 
         def on_leave(event, c=card):
-            canvas.itemconfig(c, fill="#202024")
+            canvas.itemconfig(c, fill=theme["card"])
             root.config(cursor="")
 
         def click(event, k=key):
@@ -451,55 +497,13 @@ def show_forgot_password():
 
     draw_login_background(width, height)
 
-    canvas.create_text(
-        width // 2,
-        120,
-        text="استرجاع كلمة السر",
-        fill="white",
-        font=("Arial", 40, "bold")
-    )
+    canvas.create_text(width // 2, 120, text="استرجاع كلمة السر", fill="white", font=("Arial", 40, "bold"))
+    canvas.create_text(width // 2, 260, text="بيانات الدخول الافتراضية عند إعادة الضبط:", fill="white", font=("Arial", 22, "bold"))
+    canvas.create_text(width // 2, 320, text="اسم المستخدم: admin", fill="#dddddd", font=("Arial", 20))
+    canvas.create_text(width // 2, 365, text="كلمة المرور: 1234", fill="#dddddd", font=("Arial", 20))
 
-    canvas.create_text(
-        width // 2,
-        260,
-        text="بيانات الدخول الافتراضية عند إعادة الضبط:",
-        fill="white",
-        font=("Arial", 22, "bold")
-    )
-
-    canvas.create_text(
-        width // 2,
-        320,
-        text="اسم المستخدم: admin",
-        fill="#dddddd",
-        font=("Arial", 20)
-    )
-
-    canvas.create_text(
-        width // 2,
-        365,
-        text="كلمة المرور: 1234",
-        fill="#dddddd",
-        font=("Arial", 20)
-    )
-
-    reset_btn = canvas.create_rectangle(
-        width // 2 - 170,
-        440,
-        width // 2 + 170,
-        500,
-        fill="#ffa51f",
-        outline="#ff8a00",
-        width=3
-    )
-
-    reset_text = canvas.create_text(
-        width // 2,
-        470,
-        text="إعادة ضبط الدخول",
-        fill="black",
-        font=("Arial", 20, "bold")
-    )
+    reset_btn = canvas.create_rectangle(width // 2 - 170, 440, width // 2 + 170, 500, fill="#ffa51f", outline="#ff8a00", width=3)
+    reset_text = canvas.create_text(width // 2, 470, text="إعادة ضبط الدخول", fill="black", font=("Arial", 20, "bold"))
 
     def reset_enter(event):
         canvas.itemconfig(reset_btn, fill="#ffb640")
@@ -538,11 +542,13 @@ def show_home():
 
     draw_background(width, height)
 
+    theme = get_theme()
+
     canvas.create_text(
         width // 2,
         int(height * 0.12),
         text="HAMZA SERVICES",
-        fill="#f2f2f2",
+        fill=theme["text"],
         font=("Arial", 52, "bold")
     )
 
@@ -580,7 +586,7 @@ def show_home():
             x,
             text_y,
             text=label,
-            fill="#f2f2f2",
+            fill=theme["text"],
             font=("Arial", 32, "bold"),
             justify="center"
         )
@@ -637,6 +643,40 @@ def show_settings():
             show_setting_placeholder(k)
 
     draw_list(settings_items, click_setting)
+
+
+def show_customize():
+    global current_page
+    clear_entries()
+    current_page = "customize"
+    canvas.delete("all")
+
+    width = root.winfo_width()
+    height = root.winfo_height()
+
+    draw_background(width, height)
+    draw_top_back("تخصيص الواجهة", show_settings)
+
+    current_theme = "الوضع الفاتح" if settings.get("theme") == "light" else "الوضع الليلي"
+
+    customize_items = [
+        ("🖼", "#2f7df6", "تغيير صورة الخلفية", "اختر صورة من الحاسوب واستعملها كخلفية للبرنامج", "change_bg"),
+        ("🌙", "#8d3ff2", "الوضع الليلي / الفاتح", f"الوضع الحالي: {current_theme}", "toggle_theme"),
+        ("♻", "#ff8a18", "إعادة ضبط المصنع", "إرجاع إعدادات الواجهة إلى الوضع الافتراضي دون حذف البيانات", "factory_reset"),
+    ]
+
+    def click_customize(k):
+        if k == "change_bg":
+            change_background()
+        elif k == "toggle_theme":
+            if settings.get("theme") == "dark":
+                set_theme("light")
+            else:
+                set_theme("dark")
+        elif k == "factory_reset":
+            reset_factory()
+
+    draw_list(customize_items, click_customize)
 
 
 def show_account_security():
@@ -706,6 +746,8 @@ def show_account_form(key):
     current_page = key
     canvas.delete("all")
 
+    theme = get_theme()
+
     width = root.winfo_width()
     height = root.winfo_height()
 
@@ -721,8 +763,8 @@ def show_account_form(key):
     draw_top_back(titles.get(key, "الحساب والأمان"), show_account_security)
 
     if key == "change_username":
-        canvas.create_text(width // 2, 210, text="اسم المستخدم الحالي:", fill="#dddddd", font=("Arial", 18, "bold"))
-        canvas.create_text(width // 2, 245, text=settings["username"], fill="white", font=("Arial", 24, "bold"))
+        canvas.create_text(width // 2, 210, text="اسم المستخدم الحالي:", fill=theme["muted"], font=("Arial", 18, "bold"))
+        canvas.create_text(width // 2, 245, text=settings["username"], fill=theme["text"], font=("Arial", 24, "bold"))
 
         entry = tk.Entry(root, font=("Arial", 18), justify="center", bd=0)
         entry_widgets.append(entry)
@@ -747,13 +789,13 @@ def show_account_form(key):
 
         entry_widgets.extend([old_entry, new_entry, confirm_entry])
 
-        canvas.create_text(width // 2, 190, text="كلمة المرور الحالية", fill="white", font=("Arial", 16, "bold"))
+        canvas.create_text(width // 2, 190, text="كلمة المرور الحالية", fill=theme["text"], font=("Arial", 16, "bold"))
         canvas.create_window(width // 2, 230, window=old_entry, width=360, height=42)
 
-        canvas.create_text(width // 2, 285, text="كلمة المرور الجديدة", fill="white", font=("Arial", 16, "bold"))
+        canvas.create_text(width // 2, 285, text="كلمة المرور الجديدة", fill=theme["text"], font=("Arial", 16, "bold"))
         canvas.create_window(width // 2, 325, window=new_entry, width=360, height=42)
 
-        canvas.create_text(width // 2, 380, text="تأكيد كلمة المرور الجديدة", fill="white", font=("Arial", 16, "bold"))
+        canvas.create_text(width // 2, 380, text="تأكيد كلمة المرور الجديدة", fill=theme["text"], font=("Arial", 16, "bold"))
         canvas.create_window(width // 2, 420, window=confirm_entry, width=360, height=42)
 
         def save_password():
@@ -779,9 +821,9 @@ def show_account_form(key):
         draw_save_button("حفظ كلمة المرور", 485, save_password)
 
     elif key == "reset_login":
-        canvas.create_text(width // 2, 250, text="سيتم إرجاع بيانات الدخول إلى:", fill="white", font=("Arial", 22, "bold"))
-        canvas.create_text(width // 2, 305, text="اسم المستخدم: admin", fill="#dddddd", font=("Arial", 20))
-        canvas.create_text(width // 2, 345, text="كلمة المرور: 1234", fill="#dddddd", font=("Arial", 20))
+        canvas.create_text(width // 2, 250, text="سيتم إرجاع بيانات الدخول إلى:", fill=theme["text"], font=("Arial", 22, "bold"))
+        canvas.create_text(width // 2, 305, text="اسم المستخدم: admin", fill=theme["muted"], font=("Arial", 20))
+        canvas.create_text(width // 2, 345, text="كلمة المرور: 1234", fill=theme["muted"], font=("Arial", 20))
 
         def reset_login():
             settings["username"] = "admin"
@@ -793,35 +835,9 @@ def show_account_form(key):
         draw_save_button("إعادة الضبط", 420, reset_login)
 
     elif key == "lock_app":
-        canvas.create_text(width // 2, 270, text="تم قفل البرنامج.", fill="white", font=("Arial", 24, "bold"))
-        canvas.create_text(width // 2, 320, text="سيتم الرجوع إلى شاشة تسجيل الدخول.", fill="#dddddd", font=("Arial", 18))
+        canvas.create_text(width // 2, 270, text="تم قفل البرنامج.", fill=theme["text"], font=("Arial", 24, "bold"))
+        canvas.create_text(width // 2, 320, text="سيتم الرجوع إلى شاشة تسجيل الدخول.", fill=theme["muted"], font=("Arial", 18))
         root.after(1000, show_login)
-
-
-def show_customize():
-    global current_page
-    clear_entries()
-    current_page = "customize"
-    canvas.delete("all")
-
-    width = root.winfo_width()
-    height = root.winfo_height()
-
-    draw_background(width, height)
-    draw_top_back("تخصيص الواجهة", show_settings)
-
-    customize_items = [
-        ("🖼", "#2f7df6", "تغيير صورة الخلفية", "اختر صورة من الحاسوب واستعملها كخلفية للبرنامج", "change_bg"),
-        ("♻", "#ff8a18", "إعادة ضبط المصنع", "إرجاع إعدادات البرنامج إلى الوضع الافتراضي دون حذف البيانات", "factory_reset"),
-    ]
-
-    def click_customize(k):
-        if k == "change_bg":
-            change_background()
-        else:
-            show_setting_placeholder(k)
-
-    draw_list(customize_items, click_customize)
 
 
 def show_setting_placeholder(key):
@@ -829,6 +845,8 @@ def show_setting_placeholder(key):
     clear_entries()
     current_page = key
     canvas.delete("all")
+
+    theme = get_theme()
 
     width = root.winfo_width()
     height = root.winfo_height()
@@ -845,8 +863,8 @@ def show_setting_placeholder(key):
         "factory_reset": "إعادة ضبط المصنع",
     }
 
-    canvas.create_text(width // 2, 120, text=titles.get(key, "قسم الإعدادات"), fill="white", font=("Arial", 40, "bold"))
-    canvas.create_text(width // 2, 300, text="سنقوم ببناء هذا القسم لاحقًا.", fill="#dddddd", font=("Arial", 24, "bold"))
+    canvas.create_text(width // 2, 120, text=titles.get(key, "قسم الإعدادات"), fill=theme["text"], font=("Arial", 40, "bold"))
+    canvas.create_text(width // 2, 300, text="سنقوم ببناء هذا القسم لاحقًا.", fill=theme["muted"], font=("Arial", 24, "bold"))
 
     draw_back_button(show_settings)
 
@@ -856,6 +874,8 @@ def show_placeholder(section):
     clear_entries()
     current_page = section
     canvas.delete("all")
+
+    theme = get_theme()
 
     width = root.winfo_width()
     height = root.winfo_height()
@@ -868,13 +888,15 @@ def show_placeholder(section):
         "archive": "واجهة الأرشيف",
     }
 
-    canvas.create_text(width // 2, 140, text=titles.get(section, "واجهة جديدة"), fill="white", font=("Arial", 46, "bold"))
-    canvas.create_text(width // 2, 320, text="هذه واجهة مؤقتة، سنبني تفاصيلها لاحقًا.", fill="#dddddd", font=("Arial", 24, "bold"))
+    canvas.create_text(width // 2, 140, text=titles.get(section, "واجهة جديدة"), fill=theme["text"], font=("Arial", 46, "bold"))
+    canvas.create_text(width // 2, 320, text="هذه واجهة مؤقتة، سنبني تفاصيلها لاحقًا.", fill=theme["muted"], font=("Arial", 24, "bold"))
 
     draw_back_button(show_home)
 
 
 def draw_back_button(command):
+    theme = get_theme()
+
     width = root.winfo_width()
     height = root.winfo_height()
 
@@ -883,8 +905,8 @@ def draw_back_button(command):
         height - 82,
         width // 2 + 90,
         height - 32,
-        fill="#404040",
-        outline="#666666",
+        fill=theme["button"],
+        outline=theme["border"],
         width=1
     )
 
@@ -892,16 +914,16 @@ def draw_back_button(command):
         width // 2,
         height - 57,
         text="رجوع",
-        fill="white",
+        fill=theme["text"],
         font=("Arial", 18, "bold")
     )
 
     def enter(event):
-        canvas.itemconfig(btn, fill="#555555")
+        canvas.itemconfig(btn, fill=theme["button_hover"])
         root.config(cursor="hand2")
 
     def leave(event):
-        canvas.itemconfig(btn, fill="#404040")
+        canvas.itemconfig(btn, fill=theme["button"])
         root.config(cursor="")
 
     def click(event):
