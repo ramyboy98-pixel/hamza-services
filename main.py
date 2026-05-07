@@ -289,6 +289,57 @@ def toggle_save_pdf():
     show_printer_settings()
 
 
+
+def toggle_fast_mode():
+    settings["fast_mode"] = not settings.get("fast_mode", False)
+
+    if settings["fast_mode"]:
+        settings["effects"] = False
+
+    save_settings(settings)
+    show_smart_speed()
+
+
+def toggle_smart_suggestions():
+    settings["smart_suggestions"] = not settings.get("smart_suggestions", True)
+    save_settings(settings)
+    show_smart_speed()
+
+
+def toggle_open_last_page():
+    settings["open_last_page"] = not settings.get("open_last_page", False)
+    save_settings(settings)
+    show_smart_speed()
+
+
+def toggle_quick_search():
+    settings["quick_search"] = not settings.get("quick_search", True)
+    save_settings(settings)
+    show_smart_speed()
+
+
+def toggle_keyboard_shortcuts():
+    settings["keyboard_shortcuts"] = not settings.get("keyboard_shortcuts", True)
+    save_settings(settings)
+    show_smart_speed()
+
+
+def toggle_recent_files():
+    settings["recent_files"] = not settings.get("recent_files", True)
+    save_settings(settings)
+    show_smart_speed()
+
+
+def toggle_recent_clients():
+    settings["recent_clients"] = not settings.get("recent_clients", True)
+    save_settings(settings)
+    show_smart_speed()
+
+
+def status_text(value):
+    return "مفعلة" if value else "معطلة"
+
+
 def draw_top_back(title, back_command):
     theme = get_theme()
     fonts = get_fonts()
@@ -688,6 +739,8 @@ def show_settings():
             show_clients_database()
         elif k == "backup":
             show_backup_settings()
+        elif k == "smart":
+            show_smart_speed()
         else:
             show_setting_placeholder(k)
 
@@ -1095,6 +1148,48 @@ def show_account_form(key):
         root.after(1000, show_login)
 
 
+
+
+
+def show_smart_speed():
+    global current_page
+    clear_entries()
+    current_page = "smart"
+    canvas.delete("all")
+
+    width = root.winfo_width()
+    height = root.winfo_height()
+
+    draw_background(width, height)
+    draw_top_back("الذكاء والسرعة", show_settings)
+
+    smart_items = [
+        ("⚡", "#facc15", "تسريع الواجهة", f"الحالة الحالية: {status_text(settings.get('fast_mode', False))}", "fast_mode"),
+        ("🧠", "#8d3ff2", "الاقتراحات الذكية", f"الحالة الحالية: {status_text(settings.get('smart_suggestions', True))}", "smart_suggestions"),
+        ("🕘", "#2f7df6", "فتح آخر صفحة بعد الدخول", f"الحالة الحالية: {status_text(settings.get('open_last_page', False))}", "open_last_page"),
+        ("🔎", "#22c55e", "البحث السريع", f"الحالة الحالية: {status_text(settings.get('quick_search', True))}", "quick_search"),
+        ("⌨", "#ff8a18", "اختصارات لوحة المفاتيح", f"الحالة الحالية: {status_text(settings.get('keyboard_shortcuts', True))}", "keyboard_shortcuts"),
+        ("📂", "#25b7b1", "آخر الملفات المفتوحة", f"الحالة الحالية: {status_text(settings.get('recent_files', True))}", "recent_files"),
+        ("👥", "#e03c78", "آخر الزبائن المستعملين", f"الحالة الحالية: {status_text(settings.get('recent_clients', True))}", "recent_clients"),
+    ]
+
+    def click_smart(k):
+        if k == "fast_mode":
+            toggle_fast_mode()
+        elif k == "smart_suggestions":
+            toggle_smart_suggestions()
+        elif k == "open_last_page":
+            toggle_open_last_page()
+        elif k == "quick_search":
+            toggle_quick_search()
+        elif k == "keyboard_shortcuts":
+            toggle_keyboard_shortcuts()
+        elif k == "recent_files":
+            toggle_recent_files()
+        elif k == "recent_clients":
+            toggle_recent_clients()
+
+    draw_list(smart_items, click_smart)
 
 
 def show_backup_settings():
@@ -2070,6 +2165,8 @@ def on_resize(event):
             show_latest_backup_info()
         elif current_page == "backup_path":
             show_backup_path_info()
+        elif current_page == "smart":
+            show_smart_speed()
         elif current_page in ["change_username", "change_password", "lock_app", "reset_login"]:
             show_account_form(current_page)
         elif current_page == "clients_db":
@@ -2090,7 +2187,7 @@ def on_resize(event):
             show_clients_stats()
         elif current_page in ["export_clients"]:
             show_clients_placeholder(current_page)
-        elif current_page in ["documents_settings", "smart", "info"]:
+        elif current_page in ["documents_settings", "info"]:
             show_setting_placeholder(current_page)
         else:
             show_placeholder(current_page)
