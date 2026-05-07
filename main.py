@@ -222,13 +222,13 @@ def show_documents():
         if not animation_running or current_page != "documents":
             return
 
-        total_steps = 16
+        total_steps = 8
         if step <= total_steps:
             current_y = title_start_y + (title_target_y - title_start_y) * step / total_steps
             size = int(30 + (54 - 30) * step / total_steps)
             canvas.coords(title_id, menu_center_x, current_y)
             canvas.itemconfig(title_id, font=("Arial", size, "bold"))
-            root.after(18, lambda: animate_title(step + 1))
+            root.after(8, lambda: animate_title(step + 1))
         else:
             animate_sub_items(0)
 
@@ -236,7 +236,7 @@ def show_documents():
         if not animation_running or current_page != "documents":
             return
 
-        total_steps = 22
+        total_steps = 10
         if step <= total_steps:
             for text_id, key, target_x, y in sub_texts:
                 start_x = width + 240
@@ -250,7 +250,7 @@ def show_documents():
                 current_x2 = start_x2 + (x2 - start_x2) * step / total_steps
                 canvas.coords(line_id, current_x1, y, current_x2, y)
 
-            root.after(16, lambda: animate_sub_items(step + 1))
+            root.after(6, lambda: animate_sub_items(step + 1))
         else:
             bind_document_items()
 
