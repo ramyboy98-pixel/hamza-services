@@ -26,7 +26,11 @@ DEFAULT_SETTINGS = {
     "theme": "dark",
     "accent_color": "#ffa51f",
     "font_size": "medium",
-    "effects": True
+    "effects": True,
+    "printer_name": "الطابعة الافتراضية",
+    "color_printing": True,
+    "print_preview": True,
+    "save_pdf": True
 }
 
 ACCENT_COLORS = {
@@ -232,22 +236,63 @@ def reset_factory():
     show_customize()
 
 
+def toggle_color_printing():
+    settings["color_printing"] = not settings.get("color_printing", True)
+    save_settings(settings)
+    show_printer_settings()
+
+
+def toggle_print_preview():
+    settings["print_preview"] = not settings.get("print_preview", True)
+    save_settings(settings)
+    show_printer_settings()
+
+
+def toggle_save_pdf():
+    settings["save_pdf"] = not settings.get("save_pdf", True)
+    save_settings(settings)
+    show_printer_settings()
+
+
 def draw_top_back(title, back_command):
     theme = get_theme()
     fonts = get_fonts()
     width = root.winfo_width()
 
-    canvas.create_text(35, 28, text="HAMZA SERVICES", fill=theme["text"],
-                       font=("Arial", fonts["normal"], "bold"), anchor="w")
+    canvas.create_text(
+        35,
+        28,
+        text="HAMZA SERVICES",
+        fill=theme["text"],
+        font=("Arial", fonts["normal"], "bold"),
+        anchor="w"
+    )
 
-    back_box = canvas.create_rectangle(35, 60, 125, 105, fill=theme["button"],
-                                       outline=theme["border"], width=1)
+    back_box = canvas.create_rectangle(
+        35,
+        60,
+        125,
+        105,
+        fill=theme["button"],
+        outline=theme["border"],
+        width=1
+    )
 
-    back_text = canvas.create_text(80, 82, text="←  رجوع", fill=theme["text"],
-                                   font=("Arial", fonts["normal"], "bold"))
+    back_text = canvas.create_text(
+        80,
+        82,
+        text="←  رجوع",
+        fill=theme["text"],
+        font=("Arial", fonts["normal"], "bold")
+    )
 
-    canvas.create_text(width // 2, 82, text=title, fill=theme["text"],
-                       font=("Arial", fonts["title"] - 14, "bold"))
+    canvas.create_text(
+        width // 2,
+        82,
+        text=title,
+        fill=theme["text"],
+        font=("Arial", fonts["title"] - 14, "bold")
+    )
 
     def enter(event):
         if settings.get("effects", True):
@@ -283,27 +328,53 @@ def draw_list(items, on_click_func):
         y1 = start_y + i * (row_h + gap)
         y2 = y1 + row_h
 
-        card = canvas.create_rectangle(list_x1, y1, list_x2, y2,
-                                       fill=theme["card"], outline=theme["border"], width=1)
+        card = canvas.create_rectangle(
+            list_x1, y1, list_x2, y2,
+            fill=theme["card"],
+            outline=theme["border"],
+            width=1
+        )
 
-        icon_bg = canvas.create_rectangle(list_x1 + 28, y1 + 12, list_x1 + 78, y1 + 62,
-                                          fill=color, outline=color)
+        icon_bg = canvas.create_rectangle(
+            list_x1 + 28, y1 + 12,
+            list_x1 + 78, y1 + 62,
+            fill=color,
+            outline=color
+        )
 
-        icon_text = canvas.create_text(list_x1 + 53, y1 + 37, text=symbol,
-                                       fill="white", font=("Arial", 23, "bold"))
+        icon_text = canvas.create_text(
+            list_x1 + 53,
+            y1 + 37,
+            text=symbol,
+            fill="white",
+            font=("Arial", 23, "bold")
+        )
 
-        title_text = canvas.create_text(list_x1 + 115, y1 + 25, text=title,
-                                        fill=theme["text"],
-                                        font=("Arial", fonts["button"], "bold"),
-                                        anchor="w")
+        title_text = canvas.create_text(
+            list_x1 + 115,
+            y1 + 25,
+            text=title,
+            fill=theme["text"],
+            font=("Arial", fonts["button"], "bold"),
+            anchor="w"
+        )
 
-        desc_text = canvas.create_text(list_x1 + 115, y1 + 52, text=desc,
-                                       fill=theme["muted"],
-                                       font=("Arial", fonts["small"]),
-                                       anchor="w")
+        desc_text = canvas.create_text(
+            list_x1 + 115,
+            y1 + 52,
+            text=desc,
+            fill=theme["muted"],
+            font=("Arial", fonts["small"]),
+            anchor="w"
+        )
 
-        arrow = canvas.create_text(list_x2 - 38, y1 + 37, text="›",
-                                   fill=theme["muted"], font=("Arial", 42, "bold"))
+        arrow = canvas.create_text(
+            list_x2 - 38,
+            y1 + 37,
+            text="›",
+            fill=theme["muted"],
+            font=("Arial", 42, "bold")
+        )
 
         def on_enter(event, c=card):
             if settings.get("effects", True):
@@ -576,10 +647,97 @@ def show_settings():
             show_customize()
         elif k == "account":
             show_account_security()
+        elif k == "printer":
+            show_printer_settings()
         else:
             show_setting_placeholder(k)
 
     draw_list(settings_items, click_setting)
+
+
+def show_printer_settings():
+    global current_page
+    clear_entries()
+    current_page = "printer"
+    canvas.delete("all")
+
+    width = root.winfo_width()
+    height = root.winfo_height()
+
+    draw_background(width, height)
+    draw_top_back("الطباعة", show_settings)
+
+    color_status = "ملونة" if settings.get("color_printing", True) else "أبيض وأسود"
+    preview_status = "مفعلة" if settings.get("print_preview", True) else "معطلة"
+    pdf_status = "مفعل" if settings.get("save_pdf", True) else "معطل"
+
+    printer_items = [
+        ("🖨", "#2f7df6", "اختيار الطابعة", f"الطابعة الحالية: {settings.get('printer_name', 'الطابعة الافتراضية')}", "printer_name"),
+        ("🎨", "#8d3ff2", "الطباعة الملونة / أبيض وأسود", f"الوضع الحالي: {color_status}", "color_printing"),
+        ("👁", "#22c55e", "معاينة قبل الطباعة", f"الحالة الحالية: {preview_status}", "print_preview"),
+        ("💾", "#ff8a18", "حفظ كـ PDF", f"الحالة الحالية: {pdf_status}", "save_pdf"),
+    ]
+
+    def click_printer(k):
+        if k == "printer_name":
+            show_printer_name_form()
+        elif k == "color_printing":
+            toggle_color_printing()
+        elif k == "print_preview":
+            toggle_print_preview()
+        elif k == "save_pdf":
+            toggle_save_pdf()
+
+    draw_list(printer_items, click_printer)
+
+
+def show_printer_name_form():
+    global current_page
+    clear_entries()
+    current_page = "printer_name"
+    canvas.delete("all")
+
+    theme = get_theme()
+    fonts = get_fonts()
+    width = root.winfo_width()
+    height = root.winfo_height()
+
+    draw_background(width, height)
+    draw_top_back("اختيار الطابعة", show_printer_settings)
+
+    canvas.create_text(
+        width // 2,
+        220,
+        text="اكتب اسم الطابعة التي تريد اعتمادها",
+        fill=theme["text"],
+        font=("Arial", fonts["subtitle"], "bold")
+    )
+
+    canvas.create_text(
+        width // 2,
+        265,
+        text=f"الحالية: {settings.get('printer_name', 'الطابعة الافتراضية')}",
+        fill=theme["muted"],
+        font=("Arial", fonts["normal"] + 2)
+    )
+
+    entry = tk.Entry(root, font=("Arial", fonts["normal"] + 2), justify="center", bd=0)
+    entry.insert(0, settings.get("printer_name", "الطابعة الافتراضية"))
+    entry_widgets.append(entry)
+    canvas.create_window(width // 2, 340, window=entry, width=430, height=45)
+
+    def save_printer():
+        value = entry.get().strip()
+        if not value:
+            messagebox.showerror("خطأ", "اكتب اسم الطابعة.")
+            return
+
+        settings["printer_name"] = value
+        save_settings(settings)
+        messagebox.showinfo("تم", "تم حفظ اسم الطابعة.")
+        show_printer_settings()
+
+    draw_save_button("حفظ الطابعة", 410, save_printer)
 
 
 def show_customize():
@@ -603,7 +761,7 @@ def show_customize():
         ("🌙", "#8d3ff2", "الوضع الليلي / الفاتح", f"الوضع الحالي: {current_theme}", "toggle_theme"),
         ("🎨", get_accent(), "اللون الرئيسي", "اختيار لون الأزرار والعناصر النشطة داخل البرنامج", "accent_color"),
         ("🔠", "#22c55e", "حجم الخط", f"الحجم الحالي: {current_font}", "font_size"),
-        ("✨", "#facc15", "التأثيرات البصرية", f"الحالة الحالية: {effects_status}", "effects"),
+        ("✨", "#facc15", "التأثيرات البصرية", f"الحالة الحالية: {'مفعلة' if settings.get('effects', True) else 'معطلة'}", "effects"),
         ("♻", "#ff8a18", "إعادة ضبط المصنع", "إرجاع إعدادات الواجهة إلى الوضع الافتراضي دون حذف البيانات", "factory_reset"),
     ]
 
@@ -912,7 +1070,6 @@ def show_setting_placeholder(key):
     draw_background(width, height)
 
     titles = {
-        "printer": "الطباعة",
         "documents_settings": "إدارة الوثائق",
         "backup": "النسخ الاحتياطي والحماية",
         "clients_db": "قاعدة بيانات الزبائن",
@@ -1071,9 +1228,13 @@ def on_resize(event):
             show_font_sizes()
         elif current_page == "account":
             show_account_security()
+        elif current_page == "printer":
+            show_printer_settings()
+        elif current_page == "printer_name":
+            show_printer_name_form()
         elif current_page in ["change_username", "change_password", "lock_app", "reset_login"]:
             show_account_form(current_page)
-        elif current_page in ["printer", "documents_settings", "backup", "clients_db", "smart", "info"]:
+        elif current_page in ["documents_settings", "backup", "clients_db", "smart", "info"]:
             show_setting_placeholder(current_page)
         else:
             show_placeholder(current_page)
