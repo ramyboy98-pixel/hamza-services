@@ -24,19 +24,26 @@ CLIENTS_FILE = os.path.join(APP_DATA_DIR, "clients.json")
 DEFAULT_SETTINGS = {
     "username": "admin",
     "password": "1234",
-    "background": "",
+    "interface_background": "#000000",
     "theme": "dark",
     "accent_color": "#ffa51f",
     "font_size": "medium"
 }
 
-ACCENT_COLORS = {
-    "برتقالي": "#ffa51f",
-    "أزرق": "#2f7df6",
-    "بنفسجي": "#8d3ff2",
-    "أخضر": "#22c55e",
-    "أحمر": "#ef4444",
-    "ذهبي": "#facc15"
+BACKGROUND_COLORS = {
+    "أسود": "#000000",
+    "أزرق داكن": "#071a33",
+    "رمادي داكن": "#1f2933",
+    "أخضر زيتي داكن": "#26311f",
+    "بني داكن": "#2b1d14"
+}
+
+BACKGROUND_AUTO_ACCENTS = {
+    "#000000": "#ffa51f",
+    "#071a33": "#38bdf8",
+    "#1f2933": "#facc15",
+    "#26311f": "#a3e635",
+    "#2b1d14": "#fb923c"
 }
 
 FONT_SIZES = {
@@ -111,7 +118,8 @@ def get_fonts():
 
 
 def get_accent():
-    return settings.get("accent_color", "#ffa51f")
+    bg = settings.get("interface_background", "#000000")
+    return BACKGROUND_AUTO_ACCENTS.get(bg, "#ffa51f")
 
 
 def get_theme():
@@ -184,14 +192,9 @@ def get_background_path():
 
 def draw_background(width, height):
     global background_photo
-    theme = get_theme()
 
-    bg = Image.open(get_background_path()).convert("RGB")
-    bg = bg.resize((width, height), Image.LANCZOS)
-
-    layer = Image.new("RGBA", (width, height), (0, 0, 0, theme["overlay"]))
-    bg = bg.convert("RGBA")
-    bg.alpha_composite(layer)
+    color = settings.get("interface_background", "#000000")
+    bg = Image.new("RGB", (width, height), color)
 
     background_photo = ImageTk.PhotoImage(bg)
     canvas.create_image(0, 0, image=background_photo, anchor="nw")
@@ -216,18 +219,7 @@ def draw_login_background(width, height):
 
 
 def change_background():
-    file_path = filedialog.askopenfilename(
-        title="اختر صورة خلفية",
-        filetypes=[("Images", "*.png *.jpg *.jpeg")]
-    )
-
-    if not file_path:
-        return
-
-    shutil.copy(file_path, CUSTOM_BACKGROUND)
-    settings["background"] = CUSTOM_BACKGROUND
-    save_settings(settings)
-    show_customize()
+    show_background_colors()
 
 
 def set_theme(value):
@@ -255,7 +247,7 @@ def toggle_effects():
 
 
 def reset_factory():
-    settings["background"] = ""
+    settings["interface_background"] = "#000000"
     settings["theme"] = "dark"
     settings["accent_color"] = "#ffa51f"
     settings["font_size"] = "medium"
@@ -833,9 +825,8 @@ def show_customize():
     effects_status = "مفعلة" if True else "معطلة"
 
     customize_items = [
-        ("🖼", "#2f7df6", "تغيير صورة الخلفية", "اختر صورة من الحاسوب واستعملها كخلفية للبرنامج", "change_bg"),
+        ("🎨", get_accent(), "لون الواجهة", "اختيار خلفية بلون موحد مع ضبط اللون الرئيسي تلقائيًا", "change_bg"),
         ("🌙", "#8d3ff2", "الوضع الليلي / الفاتح", f"الوضع الحالي: {current_theme}", "toggle_theme"),
-        ("🎨", get_accent(), "اللون الرئيسي", "اختيار لون الأزرار والعناصر النشطة داخل البرنامج", "accent_color"),
         ("🔠", "#22c55e", "حجم الخط", f"الحجم الحالي: {current_font}", "font_size"),
     ]
 
@@ -844,18 +835,24 @@ def show_customize():
             change_background()
         elif k == "toggle_theme":
             set_theme("light" if settings.get("theme") == "dark" else "dark")
-        elif k == "accent_color":
-            show_accent_colors()
         elif k == "font_size":
             show_font_sizes()
 
     draw_list(customize_items, click_customize)
 
 
-def show_accent_colors():
+
+def set_interface_background(color):
+    settings["interface_background"] = color
+    settings["accent_color"] = BACKGROUND_AUTO_ACCENTS.get(color, "#ffa51f")
+    save_settings(settings)
+    show_background_colors()
+
+
+def show_background_colors():
     global current_page
     clear_entries()
-    current_page = "accent_colors"
+    current_page = "background_colors"
     canvas.delete("all")
 
     theme = get_theme()
@@ -865,35 +862,62 @@ def show_accent_colors():
     height = root.winfo_height()
 
     draw_background(width, height)
-    draw_top_back("اللون الرئيسي", show_customize)
+    draw_top_back("لون الواجهة", show_customize)
 
-    canvas.create_text(width // 2, 145, text="اختر اللون الذي يناسب واجهة البرنامج",
-                       fill=theme["muted"], font=("Arial", fonts["subtitle"], "bold"))
+    canvas.create_text(
+        width // 2,
+        145,
+        text="اختر لون الخلفية الأساسي للبرنامج",
+        fill=theme["muted"],
+        font=("Arial", fonts["subtitle"], "bold")
+    )
 
     start_y = 215
     row_h = 70
     x1 = int(width * 0.25)
     x2 = int(width * 0.75)
 
-    for index, (name, color) in enumerate(ACCENT_COLORS.items()):
+    for index, (name, color) in enumerate(BACKGROUND_COLORS.items()):
         y1 = start_y + index * (row_h + 10)
         y2 = y1 + row_h
 
-        card = canvas.create_rectangle(x1, y1, x2, y2,
-                                       fill=theme["card"], outline=theme["border"], width=1)
+        card = canvas.create_rectangle(
+            x1,
+            y1,
+            x2,
+            y2,
+            fill=theme["card"],
+            outline=theme["border"],
+            width=1
+        )
 
-        color_box = canvas.create_rectangle(x1 + 25, y1 + 15, x1 + 75, y1 + 55,
-                                            fill=color, outline=color)
+        color_box = canvas.create_rectangle(
+            x1 + 25,
+            y1 + 15,
+            x1 + 75,
+            y1 + 55,
+            fill=color,
+            outline=theme["border"]
+        )
 
-        selected = "  ✓" if settings.get("accent_color") == color else ""
+        selected = "  ✓" if settings.get("interface_background", "#000000") == color else ""
 
-        text = canvas.create_text(x1 + 105, y1 + 35, text=name + selected,
-                                  fill=theme["text"],
-                                  font=("Arial", fonts["button"] + 2, "bold"),
-                                  anchor="w")
+        text = canvas.create_text(
+            x1 + 105,
+            y1 + 35,
+            text=name + selected,
+            fill=theme["text"],
+            font=("Arial", fonts["button"] + 2, "bold"),
+            anchor="w"
+        )
 
-        arrow = canvas.create_text(x2 - 35, y1 + 35, text="›",
-                                   fill=theme["muted"], font=("Arial", 38, "bold"))
+        hint = canvas.create_text(
+            x2 - 45,
+            y1 + 35,
+            text="تلقائي",
+            fill=BACKGROUND_AUTO_ACCENTS.get(color, "#ffa51f"),
+            font=("Arial", fonts["small"] + 2, "bold")
+        )
 
         def enter(event, c=card):
             if True:
@@ -906,12 +930,13 @@ def show_accent_colors():
             root.config(cursor="")
 
         def click(event, chosen=color):
-            set_accent_color(chosen)
+            set_interface_background(chosen)
 
-        for item in (card, color_box, text, arrow):
+        for item in (card, color_box, text, hint):
             canvas.tag_bind(item, "<Enter>", enter)
             canvas.tag_bind(item, "<Leave>", leave)
             canvas.tag_bind(item, "<Button-1>", click)
+
 
 
 def show_font_sizes():
@@ -2120,8 +2145,8 @@ def on_resize(event):
             show_settings()
         elif current_page == "customize":
             show_customize()
-        elif current_page == "accent_colors":
-            show_accent_colors()
+        elif current_page == "background_colors":
+            show_background_colors()
         elif current_page == "font_sizes":
             show_font_sizes()
         elif current_page == "account":
