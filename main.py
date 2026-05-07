@@ -30,7 +30,8 @@ DEFAULT_SETTINGS = {
     "printer_name": "الطابعة الافتراضية",
     "color_printing": True,
     "print_preview": True,
-    "save_pdf": True
+    "save_pdf": True,
+    "clients_count": 0
 }
 
 ACCENT_COLORS = {
@@ -649,6 +650,8 @@ def show_settings():
             show_account_security()
         elif k == "printer":
             show_printer_settings()
+        elif k == "clients_db":
+            show_clients_database()
         else:
             show_setting_placeholder(k)
 
@@ -1056,6 +1059,70 @@ def show_account_form(key):
         root.after(1000, show_login)
 
 
+
+def show_clients_database():
+    global current_page
+    clear_entries()
+    current_page = "clients_db"
+    canvas.delete("all")
+
+    width = root.winfo_width()
+    height = root.winfo_height()
+
+    draw_background(width, height)
+    draw_top_back("قاعدة بيانات الزبائن", show_settings)
+
+    clients_count = settings.get("clients_count", 0)
+
+    clients_items = [
+        ("➕", "#2f7df6", "إضافة زبون", "إدخال زبون جديد إلى قاعدة البيانات", "add_client"),
+        ("👥", "#8d3ff2", "قائمة الزبائن", f"عدد الزبائن المسجلين حاليًا: {clients_count}", "clients_list"),
+        ("🔍", "#22c55e", "البحث عن زبون", "البحث السريع بالاسم أو الهاتف أو رقم الوثيقة", "search_client"),
+        ("✏", "#ff8a18", "تعديل بيانات زبون", "تحديث معلومات زبون موجود في قاعدة البيانات", "edit_client"),
+        ("🗑", "#ef4444", "حذف زبون", "حذف زبون من قاعدة البيانات بعد التأكيد", "delete_client"),
+        ("📄", "#25b7b1", "تصدير بيانات", "تصدير قائمة الزبائن لاحقًا إلى ملف خارجي", "export_clients"),
+        ("📊", "#facc15", "إحصائيات الزبائن", "عرض عدد الزبائن والنشاطات المرتبطة بهم", "clients_stats"),
+    ]
+
+    def click_clients(k):
+        show_clients_placeholder(k)
+
+    draw_list(clients_items, click_clients)
+
+
+def show_clients_placeholder(key):
+    global current_page
+    clear_entries()
+    current_page = key
+    canvas.delete("all")
+
+    theme = get_theme()
+    fonts = get_fonts()
+    width = root.winfo_width()
+    height = root.winfo_height()
+
+    draw_background(width, height)
+
+    titles = {
+        "add_client": "إضافة زبون",
+        "clients_list": "قائمة الزبائن",
+        "search_client": "البحث عن زبون",
+        "edit_client": "تعديل بيانات زبون",
+        "delete_client": "حذف زبون",
+        "export_clients": "تصدير بيانات",
+        "clients_stats": "إحصائيات الزبائن",
+    }
+
+    draw_top_back(titles.get(key, "قاعدة بيانات الزبائن"), show_clients_database)
+
+    canvas.create_text(
+        width // 2,
+        270,
+        text="سنقوم ببناء هذه الوظيفة لاحقًا.",
+        fill=theme["muted"],
+        font=("Arial", fonts["subtitle"], "bold")
+    )
+
 def show_setting_placeholder(key):
     global current_page
     clear_entries()
@@ -1234,7 +1301,14 @@ def on_resize(event):
             show_printer_name_form()
         elif current_page in ["change_username", "change_password", "lock_app", "reset_login"]:
             show_account_form(current_page)
-        elif current_page in ["documents_settings", "backup", "clients_db", "smart", "info"]:
+        elif current_page == "clients_db":
+            show_clients_database()
+        elif current_page in [
+            "add_client", "clients_list", "search_client", "edit_client",
+            "delete_client", "export_clients", "clients_stats"
+        ]:
+            show_clients_placeholder(current_page)
+        elif current_page in ["documents_settings", "backup", "smart", "info"]:
             show_setting_placeholder(current_page)
         else:
             show_placeholder(current_page)
