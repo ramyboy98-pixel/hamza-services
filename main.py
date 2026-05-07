@@ -39,30 +39,9 @@ ACCENT_COLORS = {
 }
 
 FONT_SIZES = {
-    "small": {
-        "title": 40,
-        "subtitle": 18,
-        "menu": 24,
-        "button": 16,
-        "normal": 14,
-        "small": 11
-    },
-    "medium": {
-        "title": 52,
-        "subtitle": 22,
-        "menu": 32,
-        "button": 18,
-        "normal": 16,
-        "small": 12
-    },
-    "large": {
-        "title": 62,
-        "subtitle": 26,
-        "menu": 38,
-        "button": 22,
-        "normal": 20,
-        "small": 14
-    }
+    "small": {"title": 40, "subtitle": 18, "menu": 24, "button": 16, "normal": 14, "small": 11},
+    "medium": {"title": 52, "subtitle": 22, "menu": 32, "button": 18, "normal": 16, "small": 12},
+    "large": {"title": 62, "subtitle": 26, "menu": 38, "button": 22, "normal": 20, "small": 14}
 }
 
 os.makedirs(APP_DATA_DIR, exist_ok=True)
@@ -95,8 +74,7 @@ settings = load_settings()
 
 
 def get_fonts():
-    size = settings.get("font_size", "medium")
-    return FONT_SIZES.get(size, FONT_SIZES["medium"])
+    return FONT_SIZES.get(settings.get("font_size", "medium"), FONT_SIZES["medium"])
 
 
 def get_accent():
@@ -178,9 +156,9 @@ def draw_background(width, height):
     bg = Image.open(get_background_path()).convert("RGB")
     bg = bg.resize((width, height), Image.LANCZOS)
 
-    dark_layer = Image.new("RGBA", (width, height), (0, 0, 0, theme["overlay"]))
+    layer = Image.new("RGBA", (width, height), (0, 0, 0, theme["overlay"]))
     bg = bg.convert("RGBA")
-    bg.alpha_composite(dark_layer)
+    bg.alpha_composite(layer)
 
     background_photo = ImageTk.PhotoImage(bg)
     canvas.create_image(0, 0, image=background_photo, anchor="nw")
@@ -196,9 +174,9 @@ def draw_login_background(width, height):
     bg = Image.open(path).convert("RGB")
     bg = bg.resize((width, height), Image.LANCZOS)
 
-    dark_layer = Image.new("RGBA", (width, height), (0, 0, 0, 85))
+    layer = Image.new("RGBA", (width, height), (0, 0, 0, 85))
     bg = bg.convert("RGBA")
-    bg.alpha_composite(dark_layer)
+    bg.alpha_composite(layer)
 
     login_photo = ImageTk.PhotoImage(bg)
     canvas.create_image(0, 0, image=login_photo, anchor="nw")
@@ -259,40 +237,17 @@ def draw_top_back(title, back_command):
     fonts = get_fonts()
     width = root.winfo_width()
 
-    canvas.create_text(
-        35,
-        28,
-        text="HAMZA SERVICES",
-        fill=theme["text"],
-        font=("Arial", fonts["normal"], "bold"),
-        anchor="w"
-    )
+    canvas.create_text(35, 28, text="HAMZA SERVICES", fill=theme["text"],
+                       font=("Arial", fonts["normal"], "bold"), anchor="w")
 
-    back_box = canvas.create_rectangle(
-        35,
-        60,
-        125,
-        105,
-        fill=theme["button"],
-        outline=theme["border"],
-        width=1
-    )
+    back_box = canvas.create_rectangle(35, 60, 125, 105, fill=theme["button"],
+                                       outline=theme["border"], width=1)
 
-    back_text = canvas.create_text(
-        80,
-        82,
-        text="←  رجوع",
-        fill=theme["text"],
-        font=("Arial", fonts["normal"], "bold")
-    )
+    back_text = canvas.create_text(80, 82, text="←  رجوع", fill=theme["text"],
+                                   font=("Arial", fonts["normal"], "bold"))
 
-    canvas.create_text(
-        width // 2,
-        82,
-        text=title,
-        fill=theme["text"],
-        font=("Arial", fonts["title"] - 14, "bold")
-    )
+    canvas.create_text(width // 2, 82, text=title, fill=theme["text"],
+                       font=("Arial", fonts["title"] - 14, "bold"))
 
     def enter(event):
         if settings.get("effects", True):
@@ -328,53 +283,27 @@ def draw_list(items, on_click_func):
         y1 = start_y + i * (row_h + gap)
         y2 = y1 + row_h
 
-        card = canvas.create_rectangle(
-            list_x1, y1, list_x2, y2,
-            fill=theme["card"],
-            outline=theme["border"],
-            width=1
-        )
+        card = canvas.create_rectangle(list_x1, y1, list_x2, y2,
+                                       fill=theme["card"], outline=theme["border"], width=1)
 
-        icon_bg = canvas.create_rectangle(
-            list_x1 + 28, y1 + 12,
-            list_x1 + 78, y1 + 62,
-            fill=color,
-            outline=color
-        )
+        icon_bg = canvas.create_rectangle(list_x1 + 28, y1 + 12, list_x1 + 78, y1 + 62,
+                                          fill=color, outline=color)
 
-        icon_text = canvas.create_text(
-            list_x1 + 53,
-            y1 + 37,
-            text=symbol,
-            fill="white",
-            font=("Arial", 23, "bold")
-        )
+        icon_text = canvas.create_text(list_x1 + 53, y1 + 37, text=symbol,
+                                       fill="white", font=("Arial", 23, "bold"))
 
-        title_text = canvas.create_text(
-            list_x1 + 115,
-            y1 + 25,
-            text=title,
-            fill=theme["text"],
-            font=("Arial", fonts["button"], "bold"),
-            anchor="w"
-        )
+        title_text = canvas.create_text(list_x1 + 115, y1 + 25, text=title,
+                                        fill=theme["text"],
+                                        font=("Arial", fonts["button"], "bold"),
+                                        anchor="w")
 
-        desc_text = canvas.create_text(
-            list_x1 + 115,
-            y1 + 52,
-            text=desc,
-            fill=theme["muted"],
-            font=("Arial", fonts["small"]),
-            anchor="w"
-        )
+        desc_text = canvas.create_text(list_x1 + 115, y1 + 52, text=desc,
+                                       fill=theme["muted"],
+                                       font=("Arial", fonts["small"]),
+                                       anchor="w")
 
-        arrow = canvas.create_text(
-            list_x2 - 38,
-            y1 + 37,
-            text="›",
-            fill=theme["muted"],
-            font=("Arial", 42, "bold")
-        )
+        arrow = canvas.create_text(list_x2 - 38, y1 + 37, text="›",
+                                   fill=theme["muted"], font=("Arial", 42, "bold"))
 
         def on_enter(event, c=card):
             if settings.get("effects", True):
@@ -415,125 +344,52 @@ def show_login():
 
     center_x = width // 2
 
-    canvas.create_text(
-        center_x,
-        int(height * 0.19),
-        text="Hamza services",
-        fill="black",
-        font=("Segoe Script", fonts["title"] + 6, "bold")
-    )
+    canvas.create_text(center_x, int(height * 0.19), text="Hamza services",
+                       fill="black", font=("Segoe Script", fonts["title"] + 6, "bold"))
 
-    canvas.create_text(
-        center_x,
-        int(height * 0.30),
-        text="user name",
-        fill="white",
-        font=("Courier New", fonts["subtitle"] + 3, "bold")
-    )
+    canvas.create_text(center_x, int(height * 0.30), text="user name",
+                       fill="white", font=("Courier New", fonts["subtitle"] + 3, "bold"))
 
-    username_entry = tk.Entry(
-        root,
-        font=("Courier New", fonts["subtitle"] + 4, "bold"),
-        justify="center",
-        bd=0,
-        bg=accent,
-        fg="black",
-        insertbackground="black"
-    )
+    username_entry = tk.Entry(root, font=("Courier New", fonts["subtitle"] + 4, "bold"),
+                              justify="center", bd=0, bg=accent, fg="black",
+                              insertbackground="black")
     username_entry.insert(0, settings.get("username", "admin"))
 
-    canvas.create_window(
-        center_x,
-        int(height * 0.37),
-        window=username_entry,
-        width=360,
-        height=48
-    )
+    canvas.create_window(center_x, int(height * 0.37), window=username_entry, width=360, height=48)
 
-    canvas.create_text(
-        center_x,
-        int(height * 0.45),
-        text="password",
-        fill="white",
-        font=("Courier New", fonts["subtitle"] + 3, "bold")
-    )
+    canvas.create_text(center_x, int(height * 0.45), text="password",
+                       fill="white", font=("Courier New", fonts["subtitle"] + 3, "bold"))
 
-    password_entry = tk.Entry(
-        root,
-        font=("Courier New", fonts["subtitle"] + 4, "bold"),
-        justify="center",
-        show="*",
-        bd=0,
-        bg=accent,
-        fg="black",
-        insertbackground="black"
-    )
+    password_entry = tk.Entry(root, font=("Courier New", fonts["subtitle"] + 4, "bold"),
+                              justify="center", show="*", bd=0, bg=accent, fg="black",
+                              insertbackground="black")
 
-    canvas.create_window(
-        center_x,
-        int(height * 0.52),
-        window=password_entry,
-        width=360,
-        height=48
-    )
+    canvas.create_window(center_x, int(height * 0.52), window=password_entry, width=360, height=48)
 
     entry_widgets.extend([username_entry, password_entry])
 
-    login_btn = canvas.create_rectangle(
-        center_x - 170,
-        int(height * 0.64),
-        center_x + 170,
-        int(height * 0.64) + 62,
-        fill=accent,
-        outline=accent,
-        width=3
-    )
+    login_btn = canvas.create_rectangle(center_x - 170, int(height * 0.64),
+                                        center_x + 170, int(height * 0.64) + 62,
+                                        fill=accent, outline=accent, width=3)
 
-    login_text = canvas.create_text(
-        center_x,
-        int(height * 0.64) + 31,
-        text="LOGIN",
-        fill="black",
-        font=("Courier New", fonts["subtitle"] + 5, "bold")
-    )
+    login_text = canvas.create_text(center_x, int(height * 0.64) + 31,
+                                    text="LOGIN", fill="black",
+                                    font=("Courier New", fonts["subtitle"] + 5, "bold"))
 
-    error_text = canvas.create_text(
-        center_x,
-        int(height * 0.75),
-        text="",
-        fill="#ff4b4b",
-        font=("Arial", fonts["normal"], "bold")
-    )
+    error_text = canvas.create_text(center_x, int(height * 0.75), text="",
+                                    fill="#ff4b4b",
+                                    font=("Arial", fonts["normal"], "bold"))
 
-    forgot_text = canvas.create_text(
-        center_x,
-        int(height * 0.81),
-        text="نسيت كلمة السر؟",
-        fill="#ffffff",
-        font=("Arial", fonts["normal"] + 1, "bold")
-    )
+    forgot_text = canvas.create_text(center_x, int(height * 0.81), text="نسيت كلمة السر؟",
+                                     fill="#ffffff",
+                                     font=("Arial", fonts["normal"] + 1, "bold"))
 
-    canvas.create_line(
-        int(width * 0.18),
-        int(height * 0.88),
-        int(width * 0.82),
-        int(height * 0.88),
-        fill="#777777"
-    )
+    canvas.create_line(int(width * 0.18), int(height * 0.88),
+                       int(width * 0.82), int(height * 0.88), fill="#777777")
 
-    canvas.create_text(
-        center_x,
-        int(height * 0.94),
-        text="🔒 الرجاء إدخال اسم المستخدم وكلمة المرور للدخول",
-        fill="white",
-        font=("Arial", fonts["normal"] + 2, "bold")
-    )
-
-    def login_enter(event):
-        root.config(cursor="hand2")
-
-    def login_leave(event):
-        root.config(cursor="")
+    canvas.create_text(center_x, int(height * 0.94),
+                       text="🔒 الرجاء إدخال اسم المستخدم وكلمة المرور للدخول",
+                       fill="white", font=("Arial", fonts["normal"] + 2, "bold"))
 
     def do_login(event=None):
         username = username_entry.get().strip()
@@ -554,17 +410,14 @@ def show_login():
             canvas.itemconfig(forgot_text, fill="#ffffff")
         root.config(cursor="")
 
-    def forgot_click(event):
-        show_forgot_password()
-
     for item in (login_btn, login_text):
-        canvas.tag_bind(item, "<Enter>", login_enter)
-        canvas.tag_bind(item, "<Leave>", login_leave)
+        canvas.tag_bind(item, "<Enter>", lambda e: root.config(cursor="hand2"))
+        canvas.tag_bind(item, "<Leave>", lambda e: root.config(cursor=""))
         canvas.tag_bind(item, "<Button-1>", do_login)
 
     canvas.tag_bind(forgot_text, "<Enter>", forgot_enter)
     canvas.tag_bind(forgot_text, "<Leave>", forgot_leave)
-    canvas.tag_bind(forgot_text, "<Button-1>", forgot_click)
+    canvas.tag_bind(forgot_text, "<Button-1>", lambda e: show_forgot_password())
 
     username_entry.bind("<Return>", do_login)
     password_entry.bind("<Return>", do_login)
@@ -585,55 +438,23 @@ def show_forgot_password():
 
     draw_login_background(width, height)
 
-    canvas.create_text(
-        width // 2,
-        120,
-        text="استرجاع كلمة السر",
-        fill="white",
-        font=("Arial", fonts["title"] - 12, "bold")
-    )
+    canvas.create_text(width // 2, 120, text="استرجاع كلمة السر",
+                       fill="white", font=("Arial", fonts["title"] - 12, "bold"))
 
-    canvas.create_text(
-        width // 2,
-        260,
-        text="بيانات الدخول الافتراضية عند إعادة الضبط:",
-        fill="white",
-        font=("Arial", fonts["subtitle"], "bold")
-    )
+    canvas.create_text(width // 2, 260, text="بيانات الدخول الافتراضية عند إعادة الضبط:",
+                       fill="white", font=("Arial", fonts["subtitle"], "bold"))
 
-    canvas.create_text(
-        width // 2,
-        320,
-        text="اسم المستخدم: admin",
-        fill="#dddddd",
-        font=("Arial", fonts["normal"] + 4)
-    )
+    canvas.create_text(width // 2, 320, text="اسم المستخدم: admin",
+                       fill="#dddddd", font=("Arial", fonts["normal"] + 4))
 
-    canvas.create_text(
-        width // 2,
-        365,
-        text="كلمة المرور: 1234",
-        fill="#dddddd",
-        font=("Arial", fonts["normal"] + 4)
-    )
+    canvas.create_text(width // 2, 365, text="كلمة المرور: 1234",
+                       fill="#dddddd", font=("Arial", fonts["normal"] + 4))
 
-    reset_btn = canvas.create_rectangle(
-        width // 2 - 170,
-        440,
-        width // 2 + 170,
-        500,
-        fill=accent,
-        outline=accent,
-        width=3
-    )
+    reset_btn = canvas.create_rectangle(width // 2 - 170, 440, width // 2 + 170, 500,
+                                        fill=accent, outline=accent, width=3)
 
-    reset_text = canvas.create_text(
-        width // 2,
-        470,
-        text="إعادة ضبط الدخول",
-        fill="black",
-        font=("Arial", fonts["button"] + 2, "bold")
-    )
+    reset_text = canvas.create_text(width // 2, 470, text="إعادة ضبط الدخول",
+                                    fill="black", font=("Arial", fonts["button"] + 2, "bold"))
 
     def reset_click(event):
         settings["username"] = "admin"
@@ -667,13 +488,8 @@ def show_home():
 
     draw_background(width, height)
 
-    canvas.create_text(
-        width // 2,
-        int(height * 0.12),
-        text="HAMZA SERVICES",
-        fill=theme["text"],
-        font=("Arial", fonts["title"], "bold")
-    )
+    canvas.create_text(width // 2, int(height * 0.12), text="HAMZA SERVICES",
+                       fill=theme["text"], font=("Arial", fonts["title"], "bold"))
 
     normal_icons = {
         "documents": load_icon("assets/documents.png", (145, 145)),
@@ -703,21 +519,12 @@ def show_home():
     for index, (key, label) in enumerate(items):
         x = positions[index]
 
-        image_id = canvas.create_image(
-            x,
-            icon_y,
-            image=normal_icons[key],
-            anchor="center"
-        )
+        image_id = canvas.create_image(x, icon_y, image=normal_icons[key], anchor="center")
 
-        text_id = canvas.create_text(
-            x,
-            text_y,
-            text=label,
-            fill=theme["text"],
-            font=("Arial", fonts["menu"], "bold"),
-            justify="center"
-        )
+        text_id = canvas.create_text(x, text_y, text=label,
+                                     fill=theme["text"],
+                                     font=("Arial", fonts["menu"], "bold"),
+                                     justify="center")
 
         def on_enter(event, k=key, img=image_id):
             if settings.get("effects", True):
@@ -788,13 +595,7 @@ def show_customize():
     draw_top_back("تخصيص الواجهة", show_settings)
 
     current_theme = "الوضع الفاتح" if settings.get("theme") == "light" else "الوضع الليلي"
-
-    current_font = {
-        "small": "صغير",
-        "medium": "متوسط",
-        "large": "كبير"
-    }.get(settings.get("font_size"), "متوسط")
-
+    current_font = {"small": "صغير", "medium": "متوسط", "large": "كبير"}.get(settings.get("font_size"), "متوسط")
     effects_status = "مفعلة" if settings.get("effects", True) else "معطلة"
 
     customize_items = [
@@ -838,13 +639,8 @@ def show_accent_colors():
     draw_background(width, height)
     draw_top_back("اللون الرئيسي", show_customize)
 
-    canvas.create_text(
-        width // 2,
-        145,
-        text="اختر اللون الذي يناسب واجهة البرنامج",
-        fill=theme["muted"],
-        font=("Arial", fonts["subtitle"], "bold")
-    )
+    canvas.create_text(width // 2, 145, text="اختر اللون الذي يناسب واجهة البرنامج",
+                       fill=theme["muted"], font=("Arial", fonts["subtitle"], "bold"))
 
     start_y = 215
     row_h = 70
@@ -855,43 +651,21 @@ def show_accent_colors():
         y1 = start_y + index * (row_h + 10)
         y2 = y1 + row_h
 
-        card = canvas.create_rectangle(
-            x1,
-            y1,
-            x2,
-            y2,
-            fill=theme["card"],
-            outline=theme["border"],
-            width=1
-        )
+        card = canvas.create_rectangle(x1, y1, x2, y2,
+                                       fill=theme["card"], outline=theme["border"], width=1)
 
-        color_box = canvas.create_rectangle(
-            x1 + 25,
-            y1 + 15,
-            x1 + 75,
-            y1 + 55,
-            fill=color,
-            outline=color
-        )
+        color_box = canvas.create_rectangle(x1 + 25, y1 + 15, x1 + 75, y1 + 55,
+                                            fill=color, outline=color)
 
         selected = "  ✓" if settings.get("accent_color") == color else ""
 
-        text = canvas.create_text(
-            x1 + 105,
-            y1 + 35,
-            text=name + selected,
-            fill=theme["text"],
-            font=("Arial", fonts["button"] + 2, "bold"),
-            anchor="w"
-        )
+        text = canvas.create_text(x1 + 105, y1 + 35, text=name + selected,
+                                  fill=theme["text"],
+                                  font=("Arial", fonts["button"] + 2, "bold"),
+                                  anchor="w")
 
-        arrow = canvas.create_text(
-            x2 - 35,
-            y1 + 35,
-            text="›",
-            fill=theme["muted"],
-            font=("Arial", 38, "bold")
-        )
+        arrow = canvas.create_text(x2 - 35, y1 + 35, text="›",
+                                   fill=theme["muted"], font=("Arial", 38, "bold"))
 
         def enter(event, c=card):
             if settings.get("effects", True):
@@ -927,20 +701,10 @@ def show_font_sizes():
     draw_background(width, height)
     draw_top_back("حجم الخط", show_customize)
 
-    canvas.create_text(
-        width // 2,
-        145,
-        text="اختر حجم الخط المناسب للواجهة",
-        fill=theme["muted"],
-        font=("Arial", fonts["subtitle"], "bold")
-    )
+    canvas.create_text(width // 2, 145, text="اختر حجم الخط المناسب للواجهة",
+                       fill=theme["muted"], font=("Arial", fonts["subtitle"], "bold"))
 
-    sizes = [
-        ("صغير", "small"),
-        ("متوسط", "medium"),
-        ("كبير", "large")
-    ]
-
+    sizes = [("صغير", "small"), ("متوسط", "medium"), ("كبير", "large")]
     start_y = 240
     row_h = 80
     x1 = int(width * 0.25)
@@ -950,25 +714,13 @@ def show_font_sizes():
         y1 = start_y + index * (row_h + 12)
         y2 = y1 + row_h
 
-        card = canvas.create_rectangle(
-            x1,
-            y1,
-            x2,
-            y2,
-            fill=theme["card"],
-            outline=theme["border"],
-            width=1
-        )
+        card = canvas.create_rectangle(x1, y1, x2, y2,
+                                       fill=theme["card"], outline=theme["border"], width=1)
 
         selected = "  ✓" if settings.get("font_size") == value else ""
 
-        text = canvas.create_text(
-            width // 2,
-            y1 + 40,
-            text=label + selected,
-            fill=theme["text"],
-            font=("Arial", fonts["menu"], "bold")
-        )
+        text = canvas.create_text(width // 2, y1 + 40, text=label + selected,
+                                  fill=theme["text"], font=("Arial", fonts["menu"], "bold"))
 
         def enter(event, c=card):
             if settings.get("effects", True):
@@ -1016,22 +768,11 @@ def draw_save_button(text, y, command):
     fonts = get_fonts()
     width = root.winfo_width()
 
-    btn = canvas.create_rectangle(
-        width // 2 - 130,
-        y,
-        width // 2 + 130,
-        y + 55,
-        fill=theme["accent"],
-        outline=theme["accent"]
-    )
+    btn = canvas.create_rectangle(width // 2 - 130, y, width // 2 + 130, y + 55,
+                                  fill=theme["accent"], outline=theme["accent"])
 
-    txt = canvas.create_text(
-        width // 2,
-        y + 28,
-        text=text,
-        fill="black",
-        font=("Arial", fonts["button"], "bold")
-    )
+    txt = canvas.create_text(width // 2, y + 28, text=text,
+                             fill="black", font=("Arial", fonts["button"], "bold"))
 
     def click(event):
         command()
@@ -1065,21 +806,11 @@ def show_account_form(key):
     draw_top_back(titles.get(key, "الحساب والأمان"), show_account_security)
 
     if key == "change_username":
-        canvas.create_text(
-            width // 2,
-            210,
-            text="اسم المستخدم الحالي:",
-            fill=theme["muted"],
-            font=("Arial", fonts["normal"] + 2, "bold")
-        )
+        canvas.create_text(width // 2, 210, text="اسم المستخدم الحالي:",
+                           fill=theme["muted"], font=("Arial", fonts["normal"] + 2, "bold"))
 
-        canvas.create_text(
-            width // 2,
-            245,
-            text=settings["username"],
-            fill=theme["text"],
-            font=("Arial", fonts["subtitle"] + 2, "bold")
-        )
+        canvas.create_text(width // 2, 245, text=settings["username"],
+                           fill=theme["text"], font=("Arial", fonts["subtitle"] + 2, "bold"))
 
         entry = tk.Entry(root, font=("Arial", fonts["normal"] + 2), justify="center", bd=0)
         entry_widgets.append(entry)
@@ -1104,13 +835,16 @@ def show_account_form(key):
 
         entry_widgets.extend([old_entry, new_entry, confirm_entry])
 
-        canvas.create_text(width // 2, 190, text="كلمة المرور الحالية", fill=theme["text"], font=("Arial", fonts["normal"], "bold"))
+        canvas.create_text(width // 2, 190, text="كلمة المرور الحالية",
+                           fill=theme["text"], font=("Arial", fonts["normal"], "bold"))
         canvas.create_window(width // 2, 230, window=old_entry, width=360, height=42)
 
-        canvas.create_text(width // 2, 285, text="كلمة المرور الجديدة", fill=theme["text"], font=("Arial", fonts["normal"], "bold"))
+        canvas.create_text(width // 2, 285, text="كلمة المرور الجديدة",
+                           fill=theme["text"], font=("Arial", fonts["normal"], "bold"))
         canvas.create_window(width // 2, 325, window=new_entry, width=360, height=42)
 
-        canvas.create_text(width // 2, 380, text="تأكيد كلمة المرور الجديدة", fill=theme["text"], font=("Arial", fonts["normal"], "bold"))
+        canvas.create_text(width // 2, 380, text="تأكيد كلمة المرور الجديدة",
+                           fill=theme["text"], font=("Arial", fonts["normal"], "bold"))
         canvas.create_window(width // 2, 420, window=confirm_entry, width=360, height=42)
 
         def save_password():
@@ -1136,29 +870,14 @@ def show_account_form(key):
         draw_save_button("حفظ كلمة المرور", 485, save_password)
 
     elif key == "reset_login":
-        canvas.create_text(
-            width // 2,
-            250,
-            text="سيتم إرجاع بيانات الدخول إلى:",
-            fill=theme["text"],
-            font=("Arial", fonts["subtitle"], "bold")
-        )
+        canvas.create_text(width // 2, 250, text="سيتم إرجاع بيانات الدخول إلى:",
+                           fill=theme["text"], font=("Arial", fonts["subtitle"], "bold"))
 
-        canvas.create_text(
-            width // 2,
-            305,
-            text="اسم المستخدم: admin",
-            fill=theme["muted"],
-            font=("Arial", fonts["normal"] + 4)
-        )
+        canvas.create_text(width // 2, 305, text="اسم المستخدم: admin",
+                           fill=theme["muted"], font=("Arial", fonts["normal"] + 4))
 
-        canvas.create_text(
-            width // 2,
-            345,
-            text="كلمة المرور: 1234",
-            fill=theme["muted"],
-            font=("Arial", fonts["normal"] + 4)
-        )
+        canvas.create_text(width // 2, 345, text="كلمة المرور: 1234",
+                           fill=theme["muted"], font=("Arial", fonts["normal"] + 4))
 
         def reset_login():
             settings["username"] = "admin"
@@ -1170,21 +889,11 @@ def show_account_form(key):
         draw_save_button("إعادة الضبط", 420, reset_login)
 
     elif key == "lock_app":
-        canvas.create_text(
-            width // 2,
-            270,
-            text="تم قفل البرنامج.",
-            fill=theme["text"],
-            font=("Arial", fonts["subtitle"] + 2, "bold")
-        )
+        canvas.create_text(width // 2, 270, text="تم قفل البرنامج.",
+                           fill=theme["text"], font=("Arial", fonts["subtitle"] + 2, "bold"))
 
-        canvas.create_text(
-            width // 2,
-            320,
-            text="سيتم الرجوع إلى شاشة تسجيل الدخول.",
-            fill=theme["muted"],
-            font=("Arial", fonts["normal"] + 2)
-        )
+        canvas.create_text(width // 2, 320, text="سيتم الرجوع إلى شاشة تسجيل الدخول.",
+                           fill=theme["muted"], font=("Arial", fonts["normal"] + 2))
 
         root.after(1000, show_login)
 
@@ -1211,23 +920,74 @@ def show_setting_placeholder(key):
         "info": "معلومات البرنامج",
     }
 
-    canvas.create_text(
-        width // 2,
-        120,
-        text=titles.get(key, "قسم الإعدادات"),
-        fill=theme["text"],
-        font=("Arial", fonts["title"] - 12, "bold")
-    )
+    title = titles.get(key, "قسم الإعدادات")
+    draw_top_back(title, show_settings)
 
-    canvas.create_text(
-        width // 2,
-        300,
-        text="سنقوم ببناء هذا القسم لاحقًا.",
-        fill=theme["muted"],
-        font=("Arial", fonts["subtitle"], "bold")
-    )
+    if key == "info":
+        info_items = [
+            ("📦", "#2f7df6", "اسم البرنامج", "HAMZA SERVICES"),
+            ("⚙", "#8d3ff2", "الإصدار", "Version 1.0"),
+            ("👨‍💻", "#22c55e", "المطور", "Hamza"),
+            ("🖥", "#ff8a18", "نوع البرنامج", "إدارة وخدمات مكتبية"),
+            ("🛡", "#25b7b1", "الحالة", "مستقر ويعمل بشكل جيد"),
+            ("✨", "#facc15", "الواجهة", "واجهة حديثة قابلة للتخصيص"),
+        ]
 
-    draw_back_button(show_settings)
+        start_y = 150
+        row_h = 78
+        gap = 10
+        x1 = int(width * 0.15)
+        x2 = int(width * 0.85)
+
+        for index, (symbol, color, label, value) in enumerate(info_items):
+            y1 = start_y + index * (row_h + gap)
+            y2 = y1 + row_h
+
+            card = canvas.create_rectangle(x1, y1, x2, y2,
+                                           fill=theme["card"],
+                                           outline=theme["border"],
+                                           width=1)
+
+            icon_bg = canvas.create_rectangle(x1 + 25, y1 + 14, x1 + 78, y1 + 64,
+                                              fill=color, outline=color)
+
+            icon_text = canvas.create_text(x1 + 51, y1 + 39, text=symbol,
+                                           fill="white",
+                                           font=("Arial", 22, "bold"))
+
+            title_text = canvas.create_text(x1 + 110, y1 + 25, text=label,
+                                            fill=theme["text"],
+                                            font=("Arial", fonts["button"] + 1, "bold"),
+                                            anchor="w")
+
+            value_text = canvas.create_text(x1 + 110, y1 + 53, text=value,
+                                            fill=theme["muted"],
+                                            font=("Arial", fonts["normal"]),
+                                            anchor="w")
+
+            def enter(event, c=card):
+                if settings.get("effects", True):
+                    canvas.itemconfig(c, fill=theme["card_hover"])
+                root.config(cursor="hand2")
+
+            def leave(event, c=card):
+                if settings.get("effects", True):
+                    canvas.itemconfig(c, fill=theme["card"])
+                root.config(cursor="")
+
+            for item in (card, icon_bg, icon_text, title_text, value_text):
+                canvas.tag_bind(item, "<Enter>", enter)
+                canvas.tag_bind(item, "<Leave>", leave)
+
+        canvas.create_text(width // 2, height - 40, text="HAMZA SERVICES © 2026",
+                           fill=theme["muted"], font=("Arial", fonts["small"] + 1))
+
+        return
+
+    canvas.create_text(width // 2, 300,
+                       text="سنقوم ببناء هذا القسم لاحقًا.",
+                       fill=theme["muted"],
+                       font=("Arial", fonts["subtitle"], "bold"))
 
 
 def show_placeholder(section):
@@ -1249,21 +1009,11 @@ def show_placeholder(section):
         "archive": "واجهة الأرشيف",
     }
 
-    canvas.create_text(
-        width // 2,
-        140,
-        text=titles.get(section, "واجهة جديدة"),
-        fill=theme["text"],
-        font=("Arial", fonts["title"] - 6, "bold")
-    )
+    canvas.create_text(width // 2, 140, text=titles.get(section, "واجهة جديدة"),
+                       fill=theme["text"], font=("Arial", fonts["title"] - 6, "bold"))
 
-    canvas.create_text(
-        width // 2,
-        320,
-        text="هذه واجهة مؤقتة، سنبني تفاصيلها لاحقًا.",
-        fill=theme["muted"],
-        font=("Arial", fonts["subtitle"], "bold")
-    )
+    canvas.create_text(width // 2, 320, text="هذه واجهة مؤقتة، سنبني تفاصيلها لاحقًا.",
+                       fill=theme["muted"], font=("Arial", fonts["subtitle"], "bold"))
 
     draw_back_button(show_home)
 
@@ -1274,23 +1024,15 @@ def draw_back_button(command):
     width = root.winfo_width()
     height = root.winfo_height()
 
-    btn = canvas.create_rectangle(
-        width // 2 - 90,
-        height - 82,
-        width // 2 + 90,
-        height - 32,
-        fill=theme["button"],
-        outline=theme["border"],
-        width=1
-    )
+    btn = canvas.create_rectangle(width // 2 - 90, height - 82,
+                                  width // 2 + 90, height - 32,
+                                  fill=theme["button"],
+                                  outline=theme["border"],
+                                  width=1)
 
-    txt = canvas.create_text(
-        width // 2,
-        height - 57,
-        text="رجوع",
-        fill=theme["text"],
-        font=("Arial", fonts["button"], "bold")
-    )
+    txt = canvas.create_text(width // 2, height - 57, text="رجوع",
+                             fill=theme["text"],
+                             font=("Arial", fonts["button"], "bold"))
 
     def enter(event):
         if settings.get("effects", True):
