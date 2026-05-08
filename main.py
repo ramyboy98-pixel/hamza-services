@@ -287,6 +287,10 @@ def show_documents():
 
 
 def show_document_type(doc_type):
+    if doc_type == "written_request":
+        show_written_request()
+        return
+
     global current_page
     current_page = doc_type
     clear_screen()
@@ -300,7 +304,6 @@ def show_document_type(doc_type):
     draw_image(resource_path("assets/background.jpg"), width, height)
 
     titles = {
-        "written_request": "طلب خطي",
         "honor_statement": "تصريح شرفي",
         "cv": "سيرة ذاتية",
         "invoice": "فاتورة",
@@ -327,12 +330,194 @@ def show_document_type(doc_type):
     canvas.create_text(
         width // 2,
         int(height * 0.50),
-        text="سنقوم ببناء هذه الوثيقة في الخطوة القادمة.",
+        text="سنقوم ببناء هذه الوثيقة لاحقًا.",
         fill="#e8e1d5",
         font=("Arial", 24, "bold")
     )
 
     draw_back_button(show_documents)
+
+
+written_request_scroll = 0
+written_request_items = [
+    "الرقم السري للحساب البريدي",
+    "طلب تسوية وضعية",
+    "طلب تحويل إداري",
+    "طلب تربص ميداني",
+    "طلب عطلة سنوية",
+    "طلب شهادة عمل",
+    "طلب سكن",
+    "طلب توظيف عام",
+    "مسابقة على أساس الإختبار",
+    "طلب استخلاف",
+    "مسابقة ماستر",
+    "مسابقة الحماية المدنية",
+    "مسابقة الجمارك",
+    "مسابقة الشرطة",
+    "عقود ماقبل التشغيل ANEM",
+    "طلب توظيف 1",
+    "طلب توظيف 2",
+    "مسابقة على أساس الشهادة",
+]
+
+
+def show_written_request():
+    global current_page, written_request_scroll
+    current_page = "written_request"
+    clear_screen()
+
+    width = root.winfo_width()
+    height = root.winfo_height()
+
+    if width < 10 or height < 10:
+        width, height = 1280, 720
+
+    draw_image(resource_path("assets/background.jpg"), width, height)
+
+    right_x = int(width * 0.58)
+    menu_center_x = right_x + (width - right_x) // 2
+
+    canvas.create_text(
+        menu_center_x,
+        int(height * 0.12),
+        text="طلب خطي",
+        fill="#f4f4f4",
+        font=("Arial", 50, "bold"),
+        anchor="center"
+    )
+
+    visible_count = 10
+    max_scroll = max(0, len(written_request_items) - visible_count)
+    written_request_scroll = max(0, min(written_request_scroll, max_scroll))
+
+    start_y = int(height * 0.24)
+    row_gap = int(height * 0.065)
+
+    visible_items = written_request_items[written_request_scroll:written_request_scroll + visible_count]
+
+    for index, label in enumerate(visible_items):
+        y = start_y + index * row_gap
+
+        line_id = canvas.create_line(
+            right_x + 70,
+            y - 18,
+            width - 70,
+            y - 18,
+            fill="#8aa09c",
+            width=1
+        )
+
+        text_id = canvas.create_text(
+            menu_center_x,
+            y,
+            text=label,
+            fill="#e8e1d5",
+            font=("Arial", 23, "bold"),
+            anchor="center"
+        )
+
+        hitbox = canvas.create_rectangle(
+            right_x + 55,
+            y - 25,
+            width - 55,
+            y + 25,
+            fill="",
+            outline=""
+        )
+
+        def on_enter(event, t=text_id):
+            canvas.itemconfig(t, fill="#d7c28a")
+            root.config(cursor="hand2")
+
+        def on_leave(event, t=text_id):
+            canvas.itemconfig(t, fill="#e8e1d5")
+            root.config(cursor="")
+
+        def on_click(event, name=label):
+            show_written_request_template(name)
+
+        for item in (text_id, hitbox, line_id):
+            canvas.tag_bind(item, "<Enter>", on_enter)
+            canvas.tag_bind(item, "<Leave>", on_leave)
+            canvas.tag_bind(item, "<Button-1>", on_click)
+
+    if written_request_scroll < max_scroll:
+        canvas.create_text(
+            menu_center_x,
+            height - 42,
+            text="∨",
+            fill="#777777",
+            font=("Arial", 34, "bold")
+        )
+
+    if written_request_scroll > 0:
+        canvas.create_text(
+            menu_center_x,
+            int(height * 0.18),
+            text="∧",
+            fill="#777777",
+            font=("Arial", 28, "bold")
+        )
+
+    draw_back_button(show_documents)
+
+
+def scroll_written_request(event):
+    global written_request_scroll
+
+    if current_page != "written_request":
+        return
+
+    if event.delta < 0:
+        written_request_scroll += 1
+    else:
+        written_request_scroll -= 1
+
+    max_scroll = max(0, len(written_request_items) - 10)
+    written_request_scroll = max(0, min(written_request_scroll, max_scroll))
+    show_written_request()
+
+
+def show_written_request_template(name):
+    global current_page
+    current_page = "written_request_template"
+    clear_screen()
+
+    width = root.winfo_width()
+    height = root.winfo_height()
+
+    if width < 10 or height < 10:
+        width, height = 1280, 720
+
+    draw_image(resource_path("assets/background.jpg"), width, height)
+
+    canvas.create_rectangle(
+        int(width * 0.18),
+        int(height * 0.22),
+        int(width * 0.82),
+        int(height * 0.72),
+        fill="#173b38",
+        outline="#d7c28a",
+        width=2
+    )
+
+    canvas.create_text(
+        width // 2,
+        int(height * 0.34),
+        text=name,
+        fill="#f4f4f4",
+        font=("Arial", 38, "bold")
+    )
+
+    canvas.create_text(
+        width // 2,
+        int(height * 0.50),
+        text="سنقوم ببناء نموذج هذا الطلب في الخطوة القادمة.",
+        fill="#e8e1d5",
+        font=("Arial", 22, "bold")
+    )
+
+    draw_back_button(show_written_request)
 
 
 def show_section(section):
@@ -406,13 +591,18 @@ def on_resize(event):
             show_about()
         elif current_page == "documents":
             show_documents()
-        elif current_page in ["written_request", "honor_statement", "cv", "invoice"]:
+        elif current_page == "written_request":
+            show_written_request()
+        elif current_page == "written_request_template":
+            show_written_request()
+        elif current_page in ["honor_statement", "cv", "invoice"]:
             show_document_type(current_page)
         else:
             show_section(current_page)
 
 
 root.bind("<Configure>", on_resize)
+root.bind("<MouseWheel>", scroll_written_request)
 
 show_home()
 root.mainloop()
