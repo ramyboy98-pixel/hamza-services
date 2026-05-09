@@ -340,7 +340,7 @@ def show_document_type(doc_type):
 
 written_request_scroll = 0
 written_request_items = [
-    "طلب خطي"
+    "طلب توظيف عام"
 ]
 
 
@@ -462,6 +462,10 @@ def scroll_written_request(event):
 
 
 def show_written_request_template(name):
+    if name == "طلب توظيف عام":
+        show_job_request_form()
+        return
+
     global current_page
     current_page = "written_request_template"
     clear_screen()
@@ -501,6 +505,286 @@ def show_written_request_template(name):
     )
 
     draw_back_button(show_written_request)
+
+
+job_form_scroll = 0
+job_form_entries = {}
+
+
+def show_job_request_form():
+    global current_page, job_form_scroll, job_form_entries
+    current_page = "job_request_form"
+    clear_screen()
+
+    width = root.winfo_width()
+    height = root.winfo_height()
+
+    if width < 10 or height < 10:
+        width, height = 1280, 720
+
+    # Form background in the same identity colors
+    canvas.create_rectangle(0, 0, width, height, fill="#121018", outline="#121018")
+
+    panel_x1 = int(width * 0.08)
+    panel_x2 = int(width * 0.92)
+    panel_y1 = int(height * 0.04)
+    panel_y2 = int(height * 0.84)
+
+    canvas.create_rectangle(
+        panel_x1,
+        panel_y1,
+        panel_x2,
+        panel_y2,
+        fill="#1d1b24",
+        outline="#4f83ff",
+        width=4
+    )
+
+    sections = [
+        ("المعلومات الشخصية", [
+            ("تاريخ الطلب", "date"),
+            ("الاسم", "first_name"),
+            ("اللقب", "last_name"),
+            ("العنوان الكامل - المدينة", "address"),
+            ("رقم الهاتف", "phone"),
+            ("رقم بطاقة التعريف الوطنية", "id_card"),
+        ]),
+        ("معلومات مختلفة أخرى", [
+            ("إلى السيد (المدير/الجهة المستقبلة/قابض البريد)", "recipient"),
+            ("الرتبة المطلوبة / المنصب", "position"),
+            ("الشهادة المتحصل عليها أو المستوى الدراسي", "degree"),
+            ("التخصص", "specialty"),
+        ])
+    ]
+
+    # Flatten fields for scrolling
+    flattened = []
+    for title, fields in sections:
+        flattened.append(("__section__", title))
+        for placeholder, key in fields:
+            flattened.append((placeholder, key))
+
+    visible_count = 6
+    max_scroll = max(0, len(flattened) - visible_count)
+    job_form_scroll = max(0, min(job_form_scroll, max_scroll))
+
+    visible_items = flattened[job_form_scroll:job_form_scroll + visible_count]
+
+    start_y = panel_y1 + 58
+    row_h = int(height * 0.105)
+
+    for index, (label, key) in enumerate(visible_items):
+        y = start_y + index * row_h
+
+        if key == label and label == "__section__":
+            continue
+
+        if label == "__section__":
+            canvas.create_text(
+                width // 2,
+                y,
+                text=key,
+                fill="#f4f4f4",
+                font=("Arial", 24, "bold")
+            )
+            continue
+
+        entry_value = job_form_entries.get(key, "")
+
+        entry_bg = canvas.create_rectangle(
+            panel_x1 + 55,
+            y - 10,
+            panel_x2 - 55,
+            y + 55,
+            fill="#1d1b24",
+            outline="#686874",
+            width=2
+        )
+
+        entry = tk.Entry(
+            root,
+            font=("Arial", 20, "bold"),
+            justify="right",
+            bd=0,
+            bg="#1d1b24",
+            fg="#f4f4f4",
+            insertbackground="#4f83ff"
+        )
+
+        entry.insert(0, entry_value)
+        canvas.create_window(
+            width // 2,
+            y + 22,
+            window=entry,
+            width=panel_x2 - panel_x1 - 150,
+            height=45
+        )
+
+        # Save on key release so scrolling does not lose values
+        def save_entry(event, field_key=key, widget=entry):
+            job_form_entries[field_key] = widget.get()
+
+        entry.bind("<KeyRelease>", save_entry)
+
+        placeholder_id = None
+        if not entry_value:
+            placeholder_id = canvas.create_text(
+                panel_x2 - 85,
+                y + 22,
+                text=label,
+                fill="#8d8b95",
+                font=("Arial", 20, "bold"),
+                anchor="e"
+            )
+
+            def focus_in(event, ph=placeholder_id):
+                try:
+                    canvas.itemconfig(ph, state="hidden")
+                except:
+                    pass
+
+            def focus_out(event, ph=placeholder_id, widget=entry):
+                if not widget.get().strip():
+                    try:
+                        canvas.itemconfig(ph, state="normal")
+                    except:
+                        pass
+
+            entry.bind("<FocusIn>", focus_in)
+            entry.bind("<FocusOut>", focus_out)
+
+    if job_form_scroll > 0:
+        canvas.create_text(
+            width // 2,
+            panel_y1 + 25,
+            text="∧",
+            fill="#4f83ff",
+            font=("Arial", 28, "bold")
+        )
+
+    if job_form_scroll < max_scroll:
+        canvas.create_text(
+            width // 2,
+            panel_y2 - 25,
+            text="∨",
+            fill="#4f83ff",
+            font=("Arial", 28, "bold")
+        )
+
+    # Main button
+    btn_x1 = panel_x1
+    btn_x2 = panel_x2
+    btn_y1 = int(height * 0.885)
+    btn_y2 = int(height * 0.975)
+
+    preview_btn = canvas.create_rectangle(
+        btn_x1,
+        btn_y1,
+        btn_x2,
+        btn_y2,
+        fill="#2f6df0",
+        outline="#2f6df0",
+        width=2
+    )
+
+    preview_text = canvas.create_text(
+        width // 2,
+        (btn_y1 + btn_y2) // 2,
+        text="معاينة و تعديل",
+        fill="white",
+        font=("Arial", 30, "bold")
+    )
+
+    def btn_enter(event):
+        canvas.itemconfig(preview_btn, fill="#3f7dff", outline="#3f7dff")
+        root.config(cursor="hand2")
+
+    def btn_leave(event):
+        canvas.itemconfig(preview_btn, fill="#2f6df0", outline="#2f6df0")
+        root.config(cursor="")
+
+    def btn_click(event):
+        show_job_request_preview()
+
+    for item in (preview_btn, preview_text):
+        canvas.tag_bind(item, "<Enter>", btn_enter)
+        canvas.tag_bind(item, "<Leave>", btn_leave)
+        canvas.tag_bind(item, "<Button-1>", btn_click)
+
+    draw_back_button(show_written_request)
+
+
+def scroll_job_form(event):
+    global job_form_scroll
+
+    if current_page != "job_request_form":
+        return
+
+    if event.delta < 0:
+        job_form_scroll += 1
+    else:
+        job_form_scroll -= 1
+
+    job_form_scroll = max(0, min(job_form_scroll, 6))
+    show_job_request_form()
+
+
+def show_job_request_preview():
+    global current_page
+    current_page = "job_request_preview"
+    clear_screen()
+
+    width = root.winfo_width()
+    height = root.winfo_height()
+
+    if width < 10 or height < 10:
+        width, height = 1280, 720
+
+    canvas.create_rectangle(0, 0, width, height, fill="#121018", outline="#121018")
+
+    canvas.create_rectangle(
+        int(width * 0.12),
+        int(height * 0.10),
+        int(width * 0.88),
+        int(height * 0.82),
+        fill="#1d1b24",
+        outline="#4f83ff",
+        width=3
+    )
+
+    canvas.create_text(
+        width // 2,
+        int(height * 0.18),
+        text="معاينة طلب توظيف عام",
+        fill="#f4f4f4",
+        font=("Arial", 34, "bold")
+    )
+
+    full_name = f"{job_form_entries.get('first_name', '')} {job_form_entries.get('last_name', '')}".strip()
+
+    preview = (
+        f"الاسم واللقب: {full_name}\n"
+        f"تاريخ الطلب: {job_form_entries.get('date', '')}\n"
+        f"العنوان: {job_form_entries.get('address', '')}\n"
+        f"رقم الهاتف: {job_form_entries.get('phone', '')}\n"
+        f"رقم بطاقة التعريف: {job_form_entries.get('id_card', '')}\n\n"
+        f"إلى: {job_form_entries.get('recipient', '')}\n"
+        f"المنصب المطلوب: {job_form_entries.get('position', '')}\n"
+        f"الشهادة / المستوى: {job_form_entries.get('degree', '')}\n"
+        f"التخصص: {job_form_entries.get('specialty', '')}"
+    )
+
+    canvas.create_text(
+        width // 2,
+        int(height * 0.45),
+        text=preview,
+        fill="#e8e1d5",
+        font=("Arial", 20, "bold"),
+        justify="right",
+        width=int(width * 0.65)
+    )
+
+    draw_back_button(show_job_request_form)
 
 
 def show_section(section):
@@ -578,6 +862,10 @@ def on_resize(event):
             show_written_request()
         elif current_page == "written_request_template":
             show_written_request()
+        elif current_page == "job_request_form":
+            show_job_request_form()
+        elif current_page == "job_request_preview":
+            show_job_request_preview()
         elif current_page in ["honor_statement", "cv", "invoice"]:
             show_document_type(current_page)
         else:
@@ -585,7 +873,7 @@ def on_resize(event):
 
 
 root.bind("<Configure>", on_resize)
-root.bind("<MouseWheel>", scroll_written_request)
+root.bind("<MouseWheel>", lambda event: scroll_job_form(event) if current_page == "job_request_form" else scroll_written_request(event))
 
 show_home()
 root.mainloop()
