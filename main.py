@@ -1578,6 +1578,8 @@ def show_written_request_menu():
                     show_job_request_1_form()
                 elif t == "طلب توظيف 2":
                     show_job_request_2_form()
+                elif t == "مسابقة الجمارك":
+                    show_customs_exam_form()
                 else:
                     show_job_request_form()
 
@@ -2337,6 +2339,454 @@ def create_job_request_2_word():
     except Exception:
         pass
 
+
+customs_exam_entries = {}
+customs_calendar_month = date.today().month
+customs_calendar_year = date.today().year
+customs_birth_calendar_month = date.today().month
+customs_birth_calendar_year = date.today().year
+
+
+def make_customs_entry(x, y, w, placeholder, field_key):
+    value = customs_exam_entries.get(field_key, "")
+
+    canvas.create_line(
+        x - w // 2,
+        y + 18,
+        x + w // 2,
+        y + 18,
+        fill="#b8b8b8",
+        width=2
+    )
+
+    entry = tk.Entry(
+        root,
+        font=("Arial", 16, "bold"),
+        justify="right",
+        bd=0,
+        bg="#ffffff",
+        fg="#111111",
+        insertbackground="#111111"
+    )
+
+    if value:
+        entry.insert(0, value)
+        entry.config(fg="#111111")
+    else:
+        entry.insert(0, placeholder)
+        entry.config(fg="#b5b5b5")
+
+    def focus_in(event):
+        if entry.get() == placeholder:
+            entry.delete(0, "end")
+            entry.config(fg="#111111")
+
+    def focus_out(event):
+        if not entry.get().strip():
+            entry.delete(0, "end")
+            entry.insert(0, placeholder)
+            entry.config(fg="#b5b5b5")
+            customs_exam_entries[field_key] = ""
+
+    def save_value(event=None):
+        val = entry.get()
+        if val == placeholder:
+            customs_exam_entries[field_key] = ""
+        else:
+            customs_exam_entries[field_key] = val
+
+    entry.bind("<FocusIn>", focus_in)
+    entry.bind("<FocusOut>", focus_out)
+    entry.bind("<KeyRelease>", save_value)
+
+    canvas.create_window(x, y, window=entry, width=w, height=34)
+    return entry
+
+
+def show_customs_exam_form():
+    global current_page
+    current_page = "customs_exam_form"
+    clear_screen()
+
+    width = root.winfo_width()
+    height = root.winfo_height()
+
+    if width < 10 or height < 10:
+        width, height = 1280, 720
+
+    canvas.create_rectangle(0, 0, width, height, fill="#ffffff", outline="#ffffff")
+    draw_home_sidebar("home")
+
+    right_col_x = int(width * 0.80)
+    left_col_x = int(width * 0.34)
+    field_w = int(width * 0.29)
+
+    start_y = int(height * 0.10)
+    gap = int(height * 0.085)
+
+    right_fields = [
+        ("الاسم", "first_name"),
+        ("اللقب", "last_name"),
+        ("تاريخ الميلاد", "birth_date"),
+        ("العنوان", "address"),
+        ("رقم الهاتف", "phone"),
+        ("تاريخ الطلب", "request_date"),
+    ]
+
+    left_fields = [
+        ("المديرية الجهوية للجمارك لولاية", "customs_regional_directorate"),
+        ("الشهادة", "degree"),
+        ("الجامعة", "university"),
+        ("ولاية الجامعة", "university_state"),
+    ]
+
+    for index, (placeholder, key) in enumerate(right_fields):
+        y = start_y + index * gap
+
+        if key == "request_date":
+            make_customs_entry(right_col_x + 24, y, field_w - 58, placeholder, key)
+
+            cal_icon = canvas.create_text(
+                right_col_x - field_w // 2 + 28,
+                y,
+                text="📅",
+                fill="#000000",
+                font=("Arial", 22, "bold")
+            )
+
+            cal_hitbox = canvas.create_rectangle(
+                right_col_x - field_w // 2,
+                y - 22,
+                right_col_x - field_w // 2 + 58,
+                y + 25,
+                fill="",
+                outline=""
+            )
+
+            def open_customs_cal(event):
+                show_customs_calendar_picker()
+
+            for item in (cal_icon, cal_hitbox):
+                canvas.tag_bind(item, "<Enter>", lambda e: root.config(cursor="hand2"))
+                canvas.tag_bind(item, "<Leave>", lambda e: root.config(cursor=""))
+                canvas.tag_bind(item, "<Button-1>", open_customs_cal)
+
+        elif key == "birth_date":
+            make_customs_entry(right_col_x + 24, y, field_w - 58, placeholder, key)
+
+            birth_cal_icon = canvas.create_text(
+                right_col_x - field_w // 2 + 28,
+                y,
+                text="📅",
+                fill="#000000",
+                font=("Arial", 22, "bold")
+            )
+
+            birth_cal_hitbox = canvas.create_rectangle(
+                right_col_x - field_w // 2,
+                y - 22,
+                right_col_x - field_w // 2 + 58,
+                y + 25,
+                fill="",
+                outline=""
+            )
+
+            def open_birth_cal(event):
+                show_customs_birth_calendar_picker()
+
+            for item in (birth_cal_icon, birth_cal_hitbox):
+                canvas.tag_bind(item, "<Enter>", lambda e: root.config(cursor="hand2"))
+                canvas.tag_bind(item, "<Leave>", lambda e: root.config(cursor=""))
+                canvas.tag_bind(item, "<Button-1>", open_birth_cal)
+
+        else:
+            make_customs_entry(right_col_x, y, field_w, placeholder, key)
+
+    for index, (placeholder, key) in enumerate(left_fields):
+        make_customs_entry(left_col_x, start_y + index * gap, field_w, placeholder, key)
+
+    preview_text = canvas.create_text(
+        int(width * 0.90),
+        int(height * 0.88),
+        text="معاينة",
+        fill="#55bfff",
+        font=("Arial", 27, "bold"),
+        anchor="center"
+    )
+
+    def preview_enter(event):
+        canvas.itemconfig(preview_text, fill="#1d9fee")
+        root.config(cursor="hand2")
+
+    def preview_leave(event):
+        canvas.itemconfig(preview_text, fill="#55bfff")
+        root.config(cursor="")
+
+    def preview_click(event):
+        create_customs_exam_word()
+
+    canvas.tag_bind(preview_text, "<Enter>", preview_enter)
+    canvas.tag_bind(preview_text, "<Leave>", preview_leave)
+    canvas.tag_bind(preview_text, "<Button-1>", preview_click)
+
+
+def show_customs_calendar_picker():
+    global current_page
+    current_page = "customs_calendar_picker"
+    clear_screen()
+
+    width = root.winfo_width()
+    height = root.winfo_height()
+
+    canvas.create_rectangle(0, 0, width, height, fill="#ffffff", outline="#ffffff")
+    draw_home_sidebar("home")
+
+    panel_x1 = int(width * 0.24)
+    panel_x2 = int(width * 0.82)
+    panel_y1 = int(height * 0.12)
+    panel_y2 = int(height * 0.82)
+
+    rounded_home_rect(panel_x1, panel_y1, panel_x2, panel_y2, r=18, fill="#ffffff", outline="#dddddd", width=2)
+
+    month_name = calendar.month_name[customs_calendar_month]
+
+    canvas.create_text(
+        width // 2,
+        panel_y1 + 55,
+        text=f"{month_name} {customs_calendar_year}",
+        fill="#000000",
+        font=("Arial", 28, "bold")
+    )
+
+    prev_btn = canvas.create_text(panel_x1 + 70, panel_y1 + 55, text="‹", fill="#000000", font=("Arial", 42, "bold"))
+    next_btn = canvas.create_text(panel_x2 - 70, panel_y1 + 55, text="›", fill="#000000", font=("Arial", 42, "bold"))
+
+    def prev_month(event):
+        global customs_calendar_month, customs_calendar_year
+        customs_calendar_month -= 1
+        if customs_calendar_month < 1:
+            customs_calendar_month = 12
+            customs_calendar_year -= 1
+        show_customs_calendar_picker()
+
+    def next_month(event):
+        global customs_calendar_month, customs_calendar_year
+        customs_calendar_month += 1
+        if customs_calendar_month > 12:
+            customs_calendar_month = 1
+            customs_calendar_year += 1
+        show_customs_calendar_picker()
+
+    for item, cmd in [(prev_btn, prev_month), (next_btn, next_month)]:
+        canvas.tag_bind(item, "<Enter>", lambda e: root.config(cursor="hand2"))
+        canvas.tag_bind(item, "<Leave>", lambda e: root.config(cursor=""))
+        canvas.tag_bind(item, "<Button-1>", cmd)
+
+    days_header = ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"]
+    grid_x1 = panel_x1 + 80
+    grid_x2 = panel_x2 - 80
+    col_w = (grid_x2 - grid_x1) // 7
+    start_y = panel_y1 + 120
+    row_h = 58
+
+    for i, d in enumerate(days_header):
+        canvas.create_text(grid_x1 + i * col_w + col_w // 2, start_y, text=d, fill="#555555", font=("Arial", 14, "bold"))
+
+    cal = calendar.Calendar(firstweekday=5)
+    days = list(cal.itermonthdays(customs_calendar_year, customs_calendar_month))
+
+    for index, day in enumerate(days):
+        row = index // 7
+        col = index % 7
+        x = grid_x1 + col * col_w + col_w // 2
+        y = start_y + 45 + row * row_h
+
+        if day == 0:
+            continue
+
+        day_box = rounded_home_rect(x - 22, y - 20, x + 22, y + 20, r=10, fill="#ffffff", outline="#dddddd", width=1)
+        day_text = canvas.create_text(x, y, text=str(day), fill="#000000", font=("Arial", 15, "bold"))
+
+        def choose_day(event, selected_day=day):
+            customs_exam_entries["request_date"] = f"{selected_day:02d}/{customs_calendar_month:02d}/{customs_calendar_year}"
+            show_customs_exam_form()
+
+        for item in (day_box, day_text):
+            canvas.tag_bind(item, "<Enter>", lambda e: root.config(cursor="hand2"))
+            canvas.tag_bind(item, "<Leave>", lambda e: root.config(cursor=""))
+            canvas.tag_bind(item, "<Button-1>", choose_day)
+
+
+def show_customs_birth_calendar_picker():
+    global current_page
+    current_page = "customs_birth_calendar_picker"
+    clear_screen()
+
+    width = root.winfo_width()
+    height = root.winfo_height()
+
+    canvas.create_rectangle(0, 0, width, height, fill="#ffffff", outline="#ffffff")
+    draw_home_sidebar("home")
+
+    panel_x1 = int(width * 0.24)
+    panel_x2 = int(width * 0.82)
+    panel_y1 = int(height * 0.12)
+    panel_y2 = int(height * 0.82)
+
+    rounded_home_rect(panel_x1, panel_y1, panel_x2, panel_y2, r=18, fill="#ffffff", outline="#dddddd", width=2)
+
+    month_name = calendar.month_name[customs_birth_calendar_month]
+
+    canvas.create_text(
+        width // 2,
+        panel_y1 + 55,
+        text=f"{month_name} {customs_birth_calendar_year}",
+        fill="#000000",
+        font=("Arial", 28, "bold")
+    )
+
+    prev_btn = canvas.create_text(panel_x1 + 70, panel_y1 + 55, text="‹", fill="#000000", font=("Arial", 42, "bold"))
+    next_btn = canvas.create_text(panel_x2 - 70, panel_y1 + 55, text="›", fill="#000000", font=("Arial", 42, "bold"))
+
+    def prev_month(event):
+        global customs_birth_calendar_month, customs_birth_calendar_year
+        customs_birth_calendar_month -= 1
+        if customs_birth_calendar_month < 1:
+            customs_birth_calendar_month = 12
+            customs_birth_calendar_year -= 1
+        show_customs_birth_calendar_picker()
+
+    def next_month(event):
+        global customs_birth_calendar_month, customs_birth_calendar_year
+        customs_birth_calendar_month += 1
+        if customs_birth_calendar_month > 12:
+            customs_birth_calendar_month = 1
+            customs_birth_calendar_year += 1
+        show_customs_birth_calendar_picker()
+
+    for item, cmd in [(prev_btn, prev_month), (next_btn, next_month)]:
+        canvas.tag_bind(item, "<Enter>", lambda e: root.config(cursor="hand2"))
+        canvas.tag_bind(item, "<Leave>", lambda e: root.config(cursor=""))
+        canvas.tag_bind(item, "<Button-1>", cmd)
+
+    days_header = ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"]
+    grid_x1 = panel_x1 + 80
+    grid_x2 = panel_x2 - 80
+    col_w = (grid_x2 - grid_x1) // 7
+    start_y = panel_y1 + 120
+    row_h = 58
+
+    for i, d in enumerate(days_header):
+        canvas.create_text(grid_x1 + i * col_w + col_w // 2, start_y, text=d, fill="#555555", font=("Arial", 14, "bold"))
+
+    cal = calendar.Calendar(firstweekday=5)
+    days = list(cal.itermonthdays(customs_birth_calendar_year, customs_birth_calendar_month))
+
+    for index, day in enumerate(days):
+        row = index // 7
+        col = index % 7
+        x = grid_x1 + col * col_w + col_w // 2
+        y = start_y + 45 + row * row_h
+
+        if day == 0:
+            continue
+
+        day_box = rounded_home_rect(x - 22, y - 20, x + 22, y + 20, r=10, fill="#ffffff", outline="#dddddd", width=1)
+        day_text = canvas.create_text(x, y, text=str(day), fill="#000000", font=("Arial", 15, "bold"))
+
+        def choose_day(event, selected_day=day):
+            customs_exam_entries["birth_date"] = f"{selected_day:02d}/{customs_birth_calendar_month:02d}/{customs_birth_calendar_year}"
+            show_customs_exam_form()
+
+        for item in (day_box, day_text):
+            canvas.tag_bind(item, "<Enter>", lambda e: root.config(cursor="hand2"))
+            canvas.tag_bind(item, "<Leave>", lambda e: root.config(cursor=""))
+            canvas.tag_bind(item, "<Button-1>", choose_day)
+
+
+def create_customs_exam_word():
+    output_dir = os.path.join(os.path.expanduser("~"), "IDARA_DZ_Outputs")
+    os.makedirs(output_dir, exist_ok=True)
+
+    first_name = customs_exam_entries.get("first_name", "").strip()
+    last_name = customs_exam_entries.get("last_name", "").strip()
+    birth_date = customs_exam_entries.get("birth_date", "").strip()
+    address = customs_exam_entries.get("address", "").strip()
+    phone = customs_exam_entries.get("phone", "").strip()
+    request_date = customs_exam_entries.get("request_date", "").strip()
+    customs_state = customs_exam_entries.get("customs_regional_directorate", "").strip()
+    degree = customs_exam_entries.get("degree", "").strip()
+    university = customs_exam_entries.get("university", "").strip()
+    university_state = customs_exam_entries.get("university_state", "").strip()
+
+    full_name = f"{last_name} {first_name}".strip()
+    safe_name = full_name if full_name else "بدون_اسم"
+    safe_name = safe_name.replace("/", "-").replace("\\", "-").replace(":", "-").replace(" ", "_")
+    output_path = os.path.join(output_dir, f"مسابقة_الجمارك_{safe_name}.docx")
+
+    doc = Document()
+
+    section = doc.sections[0]
+    section.top_margin = Cm(1.4)
+    section.bottom_margin = Cm(1.4)
+    section.right_margin = Cm(1.5)
+    section.left_margin = Cm(1.5)
+
+    p = doc.add_paragraph()
+    p.alignment = WD_ALIGN_PARAGRAPH.LEFT
+    p.paragraph_format.space_after = Pt(16)
+    r = p.add_run(f"التاريخ: {request_date if request_date else '-- / -- / 2026'}.")
+    set_job1_run_font(r, 13, True)
+
+    add_job1_paragraph(doc, f"الاسم: {first_name}", 13, True, WD_ALIGN_PARAGRAPH.RIGHT, 2)
+    add_job1_paragraph(doc, f"اللقب: {last_name}", 13, True, WD_ALIGN_PARAGRAPH.RIGHT, 2)
+    add_job1_paragraph(doc, f"الهاتف: {phone}", 13, True, WD_ALIGN_PARAGRAPH.RIGHT, 2)
+    add_job1_paragraph(doc, f"العنوان: {address}", 13, True, WD_ALIGN_PARAGRAPH.RIGHT, 2)
+    add_job1_paragraph(doc, f"تاريخ الميلاد: {birth_date}", 13, True, WD_ALIGN_PARAGRAPH.RIGHT, 18)
+
+    add_job1_paragraph(doc, "المديرية العامة للجمارك", 13, False, WD_ALIGN_PARAGRAPH.LEFT, 12)
+    add_job1_paragraph(doc, f"المديرية الجهوية للجمارك لولاية {customs_state}", 13, False, WD_ALIGN_PARAGRAPH.LEFT, 55)
+
+    add_job1_paragraph(doc, "الموضوع:", 14, True, WD_ALIGN_PARAGRAPH.RIGHT, 8)
+    add_job1_paragraph(
+        doc,
+        "طلب المشاركة في مسابقة التوظيف الخارجية على أساس الاختبار لرتبة - ضباط الفرق -",
+        13,
+        True,
+        WD_ALIGN_PARAGRAPH.CENTER,
+        36
+    )
+
+    body_1 = (
+        "لي عظيم الشرف أن أتقدم إلى سيادتكم بطلبي هذا والمتمثل في طلب المشاركة في مسابقة التوظيف الخارجية على أساس "
+        "الاختبار لرتبة أعوان الرقابة للجمارك ذكور / إناث لسنة ......."
+    )
+
+    body_2 = (
+        f"علما أني متحصل على شهادة {degree} من طرف جامعة {university} لولاية {university_state}."
+    )
+
+    body_3 = "و معفى من جميع التزامات الخدمة الوطنية و مستعد للعمل في كافة أنحاء الوطن و في كل الظروف."
+
+    add_job1_paragraph(doc, body_1, 13, False, WD_ALIGN_PARAGRAPH.RIGHT, 16)
+    add_job1_paragraph(doc, body_2, 13, False, WD_ALIGN_PARAGRAPH.RIGHT, 16)
+    add_job1_paragraph(doc, body_3, 13, False, WD_ALIGN_PARAGRAPH.RIGHT, 20)
+    add_job1_paragraph(doc, "في انتظار ردكم تقبلوا منا سيدي فائق التقدير والاحترام.", 13, False, WD_ALIGN_PARAGRAPH.CENTER, 115)
+
+    add_job1_paragraph(doc, "امضاء المعني", 13, True, WD_ALIGN_PARAGRAPH.LEFT, 8)
+
+    doc.save(output_path)
+
+    try:
+        if sys.platform.startswith("win"):
+            os.startfile(output_path)
+        elif sys.platform == "darwin":
+            subprocess.Popen(["open", output_path])
+        else:
+            subprocess.Popen(["xdg-open", output_path])
+    except Exception:
+        pass
+
 def make_light_underline_entry(x, y, w, placeholder, field_key):
     value = job_form_entries.get(field_key, "")
 
@@ -2718,6 +3168,12 @@ def on_resize(event):
             show_job_request_2_form()
         elif current_page == "job2_calendar_picker":
             show_job2_calendar_picker()
+        elif current_page == "customs_exam_form":
+            show_customs_exam_form()
+        elif current_page == "customs_calendar_picker":
+            show_customs_calendar_picker()
+        elif current_page == "customs_birth_calendar_picker":
+            show_customs_birth_calendar_picker()
         elif current_page == "job1_calendar_picker":
             show_job1_calendar_picker()
         elif current_page == "written_request_menu":
