@@ -910,35 +910,35 @@ def show_job_request_form():
         else:
             make_placeholder_entry(left_col_x, y, field_w, field_h, placeholder, key)
 
-    btn_y = int(height * 0.87)
-    btn_w = int(width * 0.78)
-    btn_h = 78
+    btn_y = int(height * 0.84)
+    btn_w = 240
+    btn_h = 70
 
     preview_btn = rounded_rect(
         width // 2 - btn_w // 2,
         btn_y - btn_h // 2,
         width // 2 + btn_w // 2,
         btn_y + btn_h // 2,
-        r=32,
-        fill="#2f6df0",
-        outline="#2f6df0",
+        r=30,
+        fill="#f3eeee",
+        outline="#d9d1d1",
         width=2
     )
 
     preview_text = canvas.create_text(
         width // 2,
         btn_y,
-        text="معاينة و تعديل",
-        fill="white",
-        font=("Arial", 30, "bold")
+        text="معاينة",
+        fill="#173b38",
+        font=("Arial", 28, "bold")
     )
 
     def btn_enter(event):
-        canvas.itemconfig(preview_btn, fill="#3f7dff", outline="#3f7dff")
+        canvas.itemconfig(preview_btn, fill="#ffffff", outline="#ffffff")
         root.config(cursor="hand2")
 
     def btn_leave(event):
-        canvas.itemconfig(preview_btn, fill="#2f6df0", outline="#2f6df0")
+        canvas.itemconfig(preview_btn, fill="#f3eeee", outline="#d9d1d1")
         root.config(cursor="")
 
     def btn_click(event):
