@@ -551,7 +551,7 @@ def show_documents():
 
         def click(event, k=key):
             if k == "written_request":
-                show_job_request_form()
+                show_written_request_menu()
             else:
                 show_document_type(k)
 
@@ -1415,6 +1415,144 @@ def draw_request_type_underline(x, y, w):
         draw_request_type_dropdown(x, y + 28, w)
 
 
+
+written_request_items = [
+    "طلب توظيف","طلب توظيف","مسابقة الجمارك","مسابقة الشرطة",
+    "مسابقة الحماية المدنية","عقود ماقبل التشغيل","مسابقة الماستر","مسابقة على اساس الشهادة",
+    "مسابقة على اساس الشهادة","مسابقة على اساس الاختبار","طلب استخلاف","طلب توظيف عام",
+    "طلب استقالة","طلب سكن","طلب تسوية وضعية","طلب تحويل اداري",
+    "طلب شهادة عمل","طلب بطاقة فلاح","طلب انضمام صفوف ج.و.ش","طلب عداد كهربائي",
+    "طلب عداد غاز","طلب تصحيح عقد زواج","طلب تصحيح عقد ميلاد","طلب إعانة ريفية"
+]
+
+def show_written_request_menu():
+    global current_page
+    current_page = "written_request_menu"
+    clear_screen()
+
+    width = root.winfo_width()
+    height = root.winfo_height()
+
+    canvas.create_rectangle(0, 0, width, height, fill="#efefef", outline="#efefef")
+    draw_home_sidebar("home")
+
+    sidebar_w = 120
+    center_x = sidebar_w + (width - sidebar_w) // 2
+
+    try:
+        img = Image.open(resource_path("assets/written_request.png")).convert("RGBA")
+        img = img.resize((85,85), Image.LANCZOS)
+        photo = ImageTk.PhotoImage(img)
+        canvas.req_photo = photo
+        canvas.create_image(center_x + 120, 72, image=photo)
+    except:
+        pass
+
+    canvas.create_text(center_x, 72, text="طلب خطي", fill="#000000", font=("Arial", 44, "bold"))
+
+    search_x = width - 260
+    canvas.create_line(search_x - 165, 104, search_x + 10, 104, fill="#bdbdbd", width=2)
+
+    search_entry = tk.Entry(root, bd=0, bg="#efefef", fg="#111111",
+        font=("Arial", 18, "bold"), justify="right", insertbackground="#111111")
+
+    search_entry.insert(0, "بحث")
+    search_entry.config(fg="#9b9b9b")
+
+    def s_in(e):
+        if search_entry.get() == "بحث":
+            search_entry.delete(0, "end")
+            search_entry.config(fg="#111111")
+
+    def s_out(e):
+        if not search_entry.get():
+            search_entry.insert(0, "بحث")
+            search_entry.config(fg="#9b9b9b")
+
+    search_entry.bind("<FocusIn>", s_in)
+    search_entry.bind("<FocusOut>", s_out)
+
+    canvas.create_window(search_x - 70, 82, window=search_entry, width=155, height=30)
+    canvas.create_text(search_x + 5, 82, text="⌕", fill="#a5a5a5", font=("Arial", 28))
+
+    columns = [
+        written_request_items[16:],
+        written_request_items[8:16],
+        written_request_items[:8],
+    ]
+
+    col_x = [315, 755, 1195]
+    start_y = 175
+    gap_y = 77
+    card_w = 385
+    card_h = 58
+
+    for c, items in enumerate(columns):
+        for r, title in enumerate(items):
+            x = col_x[c]
+            y = start_y + r * gap_y
+
+            rounded_home_rect(
+                x - card_w//2 + 8,
+                y - card_h//2 + 10,
+                x + card_w//2 + 8,
+                y + card_h//2 + 10,
+                r=8,
+                fill="#cfcfcf",
+                outline="#cfcfcf"
+            )
+
+            card = rounded_home_rect(
+                x - card_w//2,
+                y - card_h//2,
+                x + card_w//2,
+                y + card_h//2,
+                r=8,
+                fill="#ffffff",
+                outline="#ececec"
+            )
+
+            size = 20
+            sub = ""
+
+            if title == "طلب توظيف عام":
+                size = 18
+                sub = "خارج إطار المسابقات"
+
+            txt = canvas.create_text(
+                x,
+                y - 4,
+                text=title,
+                fill="#000000",
+                font=("Arial", size, "bold")
+            )
+
+            if sub:
+                subtxt = canvas.create_text(
+                    x,
+                    y + 16,
+                    text=sub,
+                    fill="#555555",
+                    font=("Arial", 10, "bold")
+                )
+
+            def enter(e, cd=card):
+                canvas.itemconfig(cd, fill="#fafafa")
+                root.config(cursor="hand2")
+
+            def leave(e, cd=card):
+                canvas.itemconfig(cd, fill="#ffffff")
+                root.config(cursor="")
+
+            def click(e, t=title):
+                job_form_entries["request_type"] = t
+                show_job_request_form()
+
+            for it in (card, txt):
+                canvas.tag_bind(it, "<Enter>", enter)
+                canvas.tag_bind(it, "<Leave>", leave)
+                canvas.tag_bind(it, "<Button-1>", click)
+
 def make_light_underline_entry(x, y, w, placeholder, field_key):
     value = job_form_entries.get(field_key, "")
 
@@ -1790,6 +1928,8 @@ def on_resize(event):
             show_written_request()
         elif current_page == "job_request_form":
             show_job_request_form()
+        elif current_page == "written_request_menu":
+            show_written_request_menu()
         elif current_page == "job_request_preview":
             show_job_request_preview()
         elif current_page == "calendar_picker":
