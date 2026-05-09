@@ -1717,6 +1717,7 @@ def show_job_request_1_form():
     ]
 
     left_fields = [
+        ("تاريخ الطلب", "request_date"),
         ("السيد / الجهة المستقبلة", "recipient"),
         ("المنصب", "position"),
         ("مدة الخبرة", "experience_duration"),
@@ -1727,7 +1728,38 @@ def show_job_request_1_form():
         make_job1_entry(right_col_x, start_y + index * gap, field_w, placeholder, key)
 
     for index, (placeholder, key) in enumerate(left_fields):
-        make_job1_entry(left_col_x, start_y + index * gap, field_w, placeholder, key)
+        y = start_y + index * gap
+
+        if key == "request_date":
+            make_job1_entry(left_col_x + 24, y, field_w - 58, placeholder, key)
+
+            cal_icon = canvas.create_text(
+                left_col_x - field_w // 2 + 28,
+                y,
+                text="📅",
+                fill="#000000",
+                font=("Arial", 22, "bold")
+            )
+
+            cal_hitbox = canvas.create_rectangle(
+                left_col_x - field_w // 2,
+                y - 22,
+                left_col_x - field_w // 2 + 58,
+                y + 25,
+                fill="",
+                outline=""
+            )
+
+            def open_job1_cal(event):
+                show_job1_calendar_picker()
+
+            for item in (cal_icon, cal_hitbox):
+                canvas.tag_bind(item, "<Enter>", lambda e: root.config(cursor="hand2"))
+                canvas.tag_bind(item, "<Leave>", lambda e: root.config(cursor=""))
+                canvas.tag_bind(item, "<Button-1>", open_job1_cal)
+
+        else:
+            make_job1_entry(left_col_x, y, field_w, placeholder, key)
 
     preview_text = canvas.create_text(
         int(width * 0.90),
@@ -1753,6 +1785,128 @@ def show_job_request_1_form():
     canvas.tag_bind(preview_text, "<Leave>", preview_leave)
     canvas.tag_bind(preview_text, "<Button-1>", preview_click)
 
+
+
+job1_calendar_month = date.today().month
+job1_calendar_year = date.today().year
+
+
+def show_job1_calendar_picker():
+    global current_page
+    current_page = "job1_calendar_picker"
+    clear_screen()
+
+    width = root.winfo_width()
+    height = root.winfo_height()
+
+    canvas.create_rectangle(0, 0, width, height, fill="#ffffff", outline="#ffffff")
+    draw_home_sidebar("home")
+
+    panel_x1 = int(width * 0.24)
+    panel_x2 = int(width * 0.82)
+    panel_y1 = int(height * 0.12)
+    panel_y2 = int(height * 0.82)
+
+    rounded_home_rect(
+        panel_x1,
+        panel_y1,
+        panel_x2,
+        panel_y2,
+        r=18,
+        fill="#ffffff",
+        outline="#dddddd",
+        width=2
+    )
+
+    month_name = calendar.month_name[job1_calendar_month]
+
+    canvas.create_text(
+        width // 2,
+        panel_y1 + 55,
+        text=f"{month_name} {job1_calendar_year}",
+        fill="#000000",
+        font=("Arial", 28, "bold")
+    )
+
+    prev_btn = canvas.create_text(panel_x1 + 70, panel_y1 + 55, text="‹", fill="#000000", font=("Arial", 42, "bold"))
+    next_btn = canvas.create_text(panel_x2 - 70, panel_y1 + 55, text="›", fill="#000000", font=("Arial", 42, "bold"))
+
+    def prev_month(event):
+        global job1_calendar_month, job1_calendar_year
+        job1_calendar_month -= 1
+        if job1_calendar_month < 1:
+            job1_calendar_month = 12
+            job1_calendar_year -= 1
+        show_job1_calendar_picker()
+
+    def next_month(event):
+        global job1_calendar_month, job1_calendar_year
+        job1_calendar_month += 1
+        if job1_calendar_month > 12:
+            job1_calendar_month = 1
+            job1_calendar_year += 1
+        show_job1_calendar_picker()
+
+    for item, cmd in [(prev_btn, prev_month), (next_btn, next_month)]:
+        canvas.tag_bind(item, "<Enter>", lambda e: root.config(cursor="hand2"))
+        canvas.tag_bind(item, "<Leave>", lambda e: root.config(cursor=""))
+        canvas.tag_bind(item, "<Button-1>", cmd)
+
+    days_header = ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"]
+    grid_x1 = panel_x1 + 80
+    grid_x2 = panel_x2 - 80
+    col_w = (grid_x2 - grid_x1) // 7
+    start_y = panel_y1 + 120
+    row_h = 58
+
+    for i, d in enumerate(days_header):
+        canvas.create_text(
+            grid_x1 + i * col_w + col_w // 2,
+            start_y,
+            text=d,
+            fill="#555555",
+            font=("Arial", 14, "bold")
+        )
+
+    cal = calendar.Calendar(firstweekday=5)
+    days = list(cal.itermonthdays(job1_calendar_year, job1_calendar_month))
+
+    for index, day in enumerate(days):
+        row = index // 7
+        col = index % 7
+        x = grid_x1 + col * col_w + col_w // 2
+        y = start_y + 45 + row * row_h
+
+        if day == 0:
+            continue
+
+        day_box = rounded_home_rect(
+            x - 22,
+            y - 20,
+            x + 22,
+            y + 20,
+            r=10,
+            fill="#ffffff",
+            outline="#dddddd",
+            width=1
+        )
+
+        day_text = canvas.create_text(
+            x,
+            y,
+            text=str(day),
+            fill="#000000",
+            font=("Arial", 15, "bold")
+        )
+
+        def choose_day(event, selected_day=day):
+            job_request_1_entries["request_date"] = f"{selected_day:02d}/{job1_calendar_month:02d}/{job1_calendar_year}"
+            show_job_request_1_form()
+
+        for item in (day_box, day_text):
+            canvas.tag_bind(item, "<Enter>", lambda e: root.config(cursor="hand2"))
+            canvas.tag_bind(item, "<Leave>", lambda e: root.config(cursor=""))
+            canvas.tag_bind(item, "<Button-1>", choose_day)
 
 def set_job1_run_font(run, size=14, bold=False):
     run.font.name = "Arial"
@@ -1782,6 +1936,7 @@ def create_job_request_1_word():
     position = job_request_1_entries.get("position", "").strip()
     experience_duration = job_request_1_entries.get("experience_duration", "").strip()
     degree = job_request_1_entries.get("degree", "").strip()
+    request_date = job_request_1_entries.get("request_date", "").strip()
 
     full_name = f"{last_name} {first_name}".strip()
     safe_name = full_name if full_name else "بدون_اسم"
@@ -1791,36 +1946,37 @@ def create_job_request_1_word():
     doc = Document()
 
     section = doc.sections[0]
-    section.top_margin = Cm(1.6)
-    section.bottom_margin = Cm(1.6)
-    section.right_margin = Cm(1.8)
-    section.left_margin = Cm(1.8)
+    section.top_margin = Cm(1.4)
+    section.bottom_margin = Cm(1.4)
+    section.right_margin = Cm(1.5)
+    section.left_margin = Cm(1.5)
 
     p = doc.add_paragraph()
     p.alignment = WD_ALIGN_PARAGRAPH.LEFT
     p.paragraph_format.space_after = Pt(18)
-    r = p.add_run("التاريخ: -- / -- / 2026.")
+    r = p.add_run(f"التاريخ: {request_date if request_date else '-- / -- / 2026'}.")
     set_job1_run_font(r, 13, True)
 
-    add_job1_paragraph(doc, f"الاسم: {first_name} ................................", 14, True, WD_ALIGN_PARAGRAPH.RIGHT, 4)
-    add_job1_paragraph(doc, f"اللقب: {last_name} .................................", 14, True, WD_ALIGN_PARAGRAPH.RIGHT, 4)
-    add_job1_paragraph(doc, f"الهاتف: {phone} ................................", 14, True, WD_ALIGN_PARAGRAPH.RIGHT, 4)
-    add_job1_paragraph(doc, f"العنوان: {address} .................................", 14, True, WD_ALIGN_PARAGRAPH.RIGHT, 28)
+    add_job1_paragraph(doc, f"الاسم: {first_name}", 13, True, WD_ALIGN_PARAGRAPH.RIGHT, 2)
+    add_job1_paragraph(doc, f"اللقب: {last_name}", 13, True, WD_ALIGN_PARAGRAPH.RIGHT, 2)
+    add_job1_paragraph(doc, f"الهاتف: {phone}", 13, True, WD_ALIGN_PARAGRAPH.RIGHT, 2)
+    add_job1_paragraph(doc, f"العنوان: {address}", 13, True, WD_ALIGN_PARAGRAPH.RIGHT, 28)
 
-    add_job1_paragraph(doc, f"الى السيد: {recipient} ................................", 14, True, WD_ALIGN_PARAGRAPH.LEFT, 45)
+    add_job1_paragraph(doc, f"الى السيد: {recipient}", 13, True, WD_ALIGN_PARAGRAPH.LEFT, 60)
 
-    add_job1_paragraph(doc, "الموضوع:", 15, True, WD_ALIGN_PARAGRAPH.RIGHT, 8)
+    add_job1_paragraph(doc, "الموضوع:", 14, True, WD_ALIGN_PARAGRAPH.RIGHT, 8)
     add_job1_paragraph(doc, "طلب توظيف", 14, True, WD_ALIGN_PARAGRAPH.CENTER, 38)
 
     body = (
         f"لي عظيم الشرف أن أتقدم إلى سيادتكم بطلبي هذا والمتمثل في طلب توظيف في منصب {position}، "
-        f"وأحيطكم علما أني مستوفي لجميع الشروط المطلوبة ومن بينها شهادة و خبرة مهنية لمدة {experience_duration} "
+        f"واحيطكم علما أني مستوفي لجميع الشروط المطلوبة ومن بينها شهادة و خبرة مهنية لمدة {experience_duration} "
         f"في المجال {degree}، وتجدون التوضيح المفصل في السيرة الذاتية الملحقة مع هذا الطلب."
     )
 
-    add_job1_paragraph(doc, body, 14, False, WD_ALIGN_PARAGRAPH.RIGHT, 20)
-    add_job1_paragraph(doc, "في انتظار ردكم تقبلوا منا سيدي فائق التقدير والاحترام.", 14, False, WD_ALIGN_PARAGRAPH.CENTER, 110)
-    add_job1_paragraph(doc, "امضاء المعني", 14, True, WD_ALIGN_PARAGRAPH.LEFT, 8)
+    add_job1_paragraph(doc, body, 13, False, WD_ALIGN_PARAGRAPH.RIGHT, 22)
+    add_job1_paragraph(doc, "في انتظار ردكم تقبلوا منا سيدي فائق التقدير والاحترام.", 13, False, WD_ALIGN_PARAGRAPH.CENTER, 120)
+
+    add_job1_paragraph(doc, "امضاء المعني", 13, True, WD_ALIGN_PARAGRAPH.LEFT, 8)
 
     doc.save(output_path)
 
@@ -1833,6 +1989,8 @@ def create_job_request_1_word():
             subprocess.Popen(["xdg-open", output_path])
     except Exception:
         pass
+
+
 
 def make_light_underline_entry(x, y, w, placeholder, field_key):
     value = job_form_entries.get(field_key, "")
@@ -2211,6 +2369,8 @@ def on_resize(event):
             show_job_request_form()
         elif current_page == "job_request_1_form":
             show_job_request_1_form()
+        elif current_page == "job1_calendar_picker":
+            show_job1_calendar_picker()
         elif current_page == "written_request_menu":
             show_written_request_menu()
         elif current_page == "job_request_preview":
