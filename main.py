@@ -2,6 +2,11 @@ import tkinter as tk
 from PIL import Image, ImageTk
 import os
 import sys
+import subprocess
+from docx import Document
+from docx.shared import Pt, Cm
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.oxml.ns import qn
 import calendar
 from datetime import date
 
@@ -811,6 +816,134 @@ def draw_request_type_dropdown(x, y, w):
         canvas.create_text(x, box_y2 - 9, text="▼", fill="#777777", font=("Arial", 12, "bold"))
 
 
+
+def set_run_font(run, size=16, bold=False):
+    run.font.name = "Arial"
+    run._element.rPr.rFonts.set(qn("w:eastAsia"), "Arial")
+    run.font.size = Pt(size)
+    run.bold = bold
+
+
+def add_doc_paragraph(doc, text, size=16, bold=False, align=WD_ALIGN_PARAGRAPH.RIGHT, space_after=10):
+    p = doc.add_paragraph()
+    p.alignment = align
+    p.paragraph_format.space_after = Pt(space_after)
+    run = p.add_run(text)
+    set_run_font(run, size=size, bold=bold)
+    return p
+
+
+def open_generated_file(path):
+    try:
+        if sys.platform.startswith("win"):
+            os.startfile(path)
+        elif sys.platform == "darwin":
+            subprocess.Popen(["open", path])
+        else:
+            subprocess.Popen(["xdg-open", path])
+    except Exception as e:
+        try:
+            from tkinter import messagebox
+            messagebox.showinfo("تم", f"تم إنشاء الملف:\n{path}")
+        except:
+            pass
+
+
+def create_job_request_word():
+    output_dir = os.path.join(os.path.expanduser("~"), "IDARA_DZ_Outputs")
+    os.makedirs(output_dir, exist_ok=True)
+
+    first_name = job_form_entries.get("first_name", "").strip()
+    last_name = job_form_entries.get("last_name", "").strip()
+    full_name = f"{last_name} {first_name}".strip()
+
+    request_date = job_form_entries.get("date", "").strip()
+    address = job_form_entries.get("address", "").strip()
+    phone = job_form_entries.get("phone", "").strip()
+    recipient = job_form_entries.get("recipient", "").strip()
+    position = job_form_entries.get("position", "").strip()
+    degree = job_form_entries.get("degree", "").strip()
+    specialty = job_form_entries.get("specialty", "").strip()
+    request_type = job_form_entries.get("request_type", "").strip() or "طلب توظيف (عام)"
+
+    safe_name = full_name if full_name else "بدون_اسم"
+    safe_name = safe_name.replace("/", "-").replace("\\", "-").replace(":", "-")
+    file_name = f"{request_type}_{safe_name}.docx".replace(" ", "_")
+    output_path = os.path.join(output_dir, file_name)
+
+    doc = Document()
+
+    section = doc.sections[0]
+    section.top_margin = Cm(2.0)
+    section.bottom_margin = Cm(2.0)
+    section.right_margin = Cm(2.0)
+    section.left_margin = Cm(2.0)
+
+    # Top date
+    add_doc_paragraph(
+        doc,
+        f"في: {request_date}",
+        size=16,
+        bold=False,
+        align=WD_ALIGN_PARAGRAPH.LEFT,
+        space_after=36
+    )
+
+    # Personal info block
+    add_doc_paragraph(doc, f"الاسم واللقب: {full_name}", size=16, align=WD_ALIGN_PARAGRAPH.RIGHT, space_after=8)
+    add_doc_paragraph(doc, f"العنوان: {address}", size=16, align=WD_ALIGN_PARAGRAPH.RIGHT, space_after=8)
+    add_doc_paragraph(doc, f"الهاتف: {phone}", size=16, align=WD_ALIGN_PARAGRAPH.RIGHT, space_after=38)
+
+    # Recipient
+    add_doc_paragraph(
+        doc,
+        f"إلى السيد: {recipient}",
+        size=20,
+        bold=True,
+        align=WD_ALIGN_PARAGRAPH.CENTER,
+        space_after=45
+    )
+
+    # Subject
+    subject = "طلب توظيف"
+    if request_type and request_type != "طلب توظيف (عام)":
+        subject = request_type
+
+    add_doc_paragraph(
+        doc,
+        f"الموضوع: {subject}",
+        size=18,
+        bold=True,
+        align=WD_ALIGN_PARAGRAPH.CENTER,
+        space_after=42
+    )
+
+    body_1 = (
+        f"يشرفني أن أتقدم بطلبي هذا من أجل الحصول على منصب {position} "
+        f"يتوافق مع مؤهلاتي العلمية وخبراتي المهنية في مؤسستكم الموقرة."
+    )
+
+    body_2 = (
+        f"أنا {full_name}، متحصل على شهادة {degree}، تخصص {specialty}. "
+        "أتمتع بروح المسؤولية والانضباط، وأطمح للمساهمة في تطوير أداء مؤسستكم."
+    )
+
+    add_doc_paragraph(doc, body_1, size=17, align=WD_ALIGN_PARAGRAPH.RIGHT, space_after=28)
+    add_doc_paragraph(doc, body_2, size=17, align=WD_ALIGN_PARAGRAPH.RIGHT, space_after=80)
+
+    add_doc_paragraph(
+        doc,
+        "توقيع المعني:",
+        size=18,
+        bold=True,
+        align=WD_ALIGN_PARAGRAPH.LEFT,
+        space_after=10
+    )
+
+    doc.save(output_path)
+    return output_path
+
+
 def show_job_request_form():
     global current_page, job_form_entries
     current_page = "job_request_form"
@@ -1092,62 +1225,25 @@ def scroll_job_form(event):
 
 
 def show_job_request_preview():
-    global current_page
-    current_page = "job_request_preview"
-    clear_screen()
+    selected_type = job_form_entries.get("request_type", "").strip()
 
-    width = root.winfo_width()
-    height = root.winfo_height()
+    if selected_type and selected_type != "طلب توظيف (عام)":
+        try:
+            messagebox.showinfo(
+                "تنبيه",
+                "حاليًا تم تجهيز نموذج Word لطلب توظيف (عام) فقط.\nسنضيف بقية النماذج واحدًا واحدًا لاحقًا."
+            )
+        except:
+            pass
 
-    if width < 10 or height < 10:
-        width, height = 1280, 720
-
-    canvas.create_rectangle(0, 0, width, height, fill="#121018", outline="#121018")
-
-    canvas.create_rectangle(
-        int(width * 0.12),
-        int(height * 0.10),
-        int(width * 0.88),
-        int(height * 0.82),
-        fill="#1d1b24",
-        outline="#4f83ff",
-        width=3
-    )
-
-    canvas.create_text(
-        width // 2,
-        int(height * 0.18),
-        text="معاينة طلب توظيف عام",
-        fill="#f4f4f4",
-        font=("Arial", 34, "bold")
-    )
-
-    full_name = f"{job_form_entries.get('first_name', '')} {job_form_entries.get('last_name', '')}".strip()
-
-    preview = (
-        f"الاسم واللقب: {full_name}\n"
-        f"تاريخ الطلب: {job_form_entries.get('date', '')}\n"
-        f"العنوان: {job_form_entries.get('address', '')}\n"
-        f"رقم الهاتف: {job_form_entries.get('phone', '')}\n"
-        f"رقم بطاقة التعريف: {job_form_entries.get('id_card', '')}\n\n"
-        f"إلى: {job_form_entries.get('recipient', '')}\n"
-        f"المنصب المطلوب: {job_form_entries.get('position', '')}\n"
-        f"الشهادة / المستوى: {job_form_entries.get('degree', '')}\n"
-        f"التخصص: {job_form_entries.get('specialty', '')}\n"
-        f"نوع الطلب: {job_form_entries.get('request_type', '')}"
-    )
-
-    canvas.create_text(
-        width // 2,
-        int(height * 0.45),
-        text=preview,
-        fill="#e8e1d5",
-        font=("Arial", 20, "bold"),
-        justify="right",
-        width=int(width * 0.65)
-    )
-
-    draw_back_button(show_job_request_form)
+    try:
+        output_path = create_job_request_word()
+        open_generated_file(output_path)
+    except Exception as e:
+        try:
+            messagebox.showerror("خطأ", f"تعذر إنشاء ملف Word:\n{e}")
+        except:
+            pass
 
 
 def show_section(section):
