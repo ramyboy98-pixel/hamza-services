@@ -2,6 +2,9 @@ import tkinter as tk
 from PIL import Image, ImageTk
 import os
 import sys
+import json
+import shutil
+from datetime import datetime
 import subprocess
 from docx import Document
 from docx.shared import Pt, Cm
@@ -17,6 +20,132 @@ def resource_path(relative_path):
     except Exception:
         base_path = os.path.abspath(".")
     return os.path.join(base_path, relative_path)
+
+
+APP_DATA_DIR = os.path.join(os.path.expanduser("~"), "IDARA_DZ")
+CLIENTS_DATA_FILE = os.path.join(APP_DATA_DIR, "clients_data.json")
+ARCHIVE_DIR = os.path.join(APP_DATA_DIR, "archive")
+
+os.makedirs(APP_DATA_DIR, exist_ok=True)
+os.makedirs(ARCHIVE_DIR, exist_ok=True)
+
+
+def load_clients_data():
+    if not os.path.exists(CLIENTS_DATA_FILE):
+        return []
+
+    try:
+        with open(CLIENTS_DATA_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, list) else []
+    except:
+        return []
+
+
+def save_clients_data(data):
+    with open(CLIENTS_DATA_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
+
+
+def save_or_update_client_from_form(generated_file_path=None):
+    clients = load_clients_data()
+
+    first_name = job_form_entries.get("first_name", "").strip()
+    last_name = job_form_entries.get("last_name", "").strip()
+    birth_info = job_form_entries.get("birth_info", "").strip()
+    birth_info = job_form_entries.get("birth_info", "").strip()
+    address = job_form_entries.get("address", "").strip()
+    phone = job_form_entries.get("phone", "").strip()
+    id_card = job_form_entries.get("id_card", "").strip()
+
+    if not first_name and not last_name and not phone and not id_card:
+        return
+
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    request_type = job_form_entries.get("request_type", "").strip() or "طلب توظيف (عام)"
+
+    found = None
+
+    for client in clients:
+        same_phone = phone and client.get("phone") == phone
+        same_id = id_card and client.get("id_card") == id_card
+        same_name = first_name and last_name and client.get("first_name") == first_name and client.get("last_name") == last_name
+
+        if same_phone or same_id or same_name:
+            found = client
+            break
+
+    record = {
+        "first_name": first_name,
+        "last_name": last_name,
+        "birth_info": birth_info,
+        "address": address,
+        "phone": phone,
+        "id_card": id_card,
+        "last_request": request_type,
+        "last_used": now,
+        "last_file": generated_file_path or ""
+    }
+
+    if found:
+        found.update(record)
+    else:
+        clients.append(record)
+
+    save_clients_data(clients)
+
+
+def archive_generated_file(file_path):
+    if not file_path or not os.path.exists(file_path):
+        return file_path
+
+    request_type = job_form_entries.get("request_type", "").strip() or "طلب توظيف (عام)"
+    first_name = job_form_entries.get("first_name", "").strip()
+    last_name = job_form_entries.get("last_name", "").strip()
+    full_name = f"{last_name}_{first_name}".strip("_") or "بدون_اسم"
+
+    safe_request = request_type.replace("/", "-").replace("\\", "-").replace(":", "-").replace(" ", "_")
+    safe_name = full_name.replace("/", "-").replace("\\", "-").replace(":", "-").replace(" ", "_")
+
+    folder = os.path.join(ARCHIVE_DIR, "طلبات خطية", safe_request)
+    os.makedirs(folder, exist_ok=True)
+
+    stamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    archive_path = os.path.join(folder, f"{safe_name}_{stamp}.docx")
+
+    shutil.copy2(file_path, archive_path)
+    return archive_path
+
+
+def find_client_suggestions(text):
+    query = (text or "").strip().lower()
+    if not query:
+        return []
+
+    results = []
+    for client in load_clients_data():
+        combined = " ".join([
+            client.get("first_name", ""),
+            client.get("last_name", ""),
+            client.get("phone", ""),
+            client.get("id_card", ""),
+        ]).lower()
+
+        if query in combined:
+            results.append(client)
+
+    return results[:5]
+
+
+def apply_client_to_form(client):
+    job_form_entries["first_name"] = client.get("first_name", "")
+    job_form_entries["last_name"] = client.get("last_name", "")
+    job_form_entries["birth_info"] = client.get("birth_info", "")
+    job_form_entries["address"] = client.get("address", "")
+    job_form_entries["phone"] = client.get("phone", "")
+    job_form_entries["id_card"] = client.get("id_card", "")
+    show_job_request_form()
+
 
 
 root = tk.Tk()
@@ -557,6 +686,89 @@ def rounded_rect(x1, y1, x2, y2, r=24, fill="#f3eeee", outline="#f3eeee", width=
     return canvas.create_polygon(points, smooth=True, fill=fill, outline=outline, width=width)
 
 
+suggestion_items = []
+
+
+def clear_suggestions():
+    global suggestion_items
+    for item in suggestion_items:
+        try:
+            canvas.delete(item)
+        except:
+            pass
+    suggestion_items = []
+
+
+def draw_client_suggestions(x, y, w, field_key, current_text):
+    global suggestion_items
+    clear_suggestions()
+
+    if field_key not in ["first_name", "last_name", "phone", "id_card"]:
+        return
+
+    results = find_client_suggestions(current_text)
+    if not results:
+        return
+
+    row_h = 38
+    box_h = row_h * len(results) + 10
+    box_x1 = x - w // 2
+    box_x2 = x + w // 2
+    box_y1 = y + 36
+    box_y2 = box_y1 + box_h
+
+    bg = rounded_rect(
+        box_x1,
+        box_y1,
+        box_x2,
+        box_y2,
+        r=18,
+        fill="#f3eeee",
+        outline="#d9d1d1",
+        width=2
+    )
+    suggestion_items.append(bg)
+
+    for index, client in enumerate(results):
+        item_y = box_y1 + 10 + index * row_h + row_h // 2
+        label = f"{client.get('last_name', '')} {client.get('first_name', '')} - {client.get('phone', '')}".strip()
+
+        text = canvas.create_text(
+            box_x2 - 20,
+            item_y,
+            text=label,
+            fill="#173b38",
+            font=("Arial", 14, "bold"),
+            anchor="e"
+        )
+
+        hitbox = canvas.create_rectangle(
+            box_x1 + 5,
+            item_y - 17,
+            box_x2 - 5,
+            item_y + 17,
+            fill="",
+            outline=""
+        )
+
+        suggestion_items.extend([text, hitbox])
+
+        def enter(event):
+            root.config(cursor="hand2")
+
+        def leave(event):
+            root.config(cursor="")
+
+        def click(event, selected=client):
+            clear_suggestions()
+            apply_client_to_form(selected)
+
+        for item in (text, hitbox):
+            canvas.tag_bind(item, "<Enter>", enter)
+            canvas.tag_bind(item, "<Leave>", leave)
+            canvas.tag_bind(item, "<Button-1>", click)
+
+
 def make_placeholder_entry(x, y, w, h, placeholder, field_key):
     value = job_form_entries.get(field_key, "")
 
@@ -599,13 +811,16 @@ def make_placeholder_entry(x, y, w, h, placeholder, field_key):
             entry.insert(0, placeholder)
             entry.config(fg="#777777")
             job_form_entries[field_key] = ""
+            root.after(200, clear_suggestions)
 
     def save_value(event=None):
         val = entry.get()
         if val == placeholder:
             job_form_entries[field_key] = ""
+            clear_suggestions()
         else:
             job_form_entries[field_key] = val
+            draw_client_suggestions(x, y, w, field_key, val)
 
     entry.bind("<FocusIn>", focus_in)
     entry.bind("<FocusOut>", focus_out)
@@ -858,6 +1073,7 @@ def create_job_request_word():
     full_name = f"{last_name} {first_name}".strip()
 
     request_date = job_form_entries.get("date", "").strip()
+    birth_info = job_form_entries.get("birth_info", "").strip()
     address = job_form_entries.get("address", "").strip()
     phone = job_form_entries.get("phone", "").strip()
     recipient = job_form_entries.get("recipient", "").strip()
@@ -891,6 +1107,7 @@ def create_job_request_word():
 
     # Personal info block
     add_doc_paragraph(doc, f"الاسم واللقب: {full_name}", size=16, align=WD_ALIGN_PARAGRAPH.RIGHT, space_after=8)
+    add_doc_paragraph(doc, f"تاريخ ومكان الميلاد: {birth_info}", size=16, align=WD_ALIGN_PARAGRAPH.RIGHT, space_after=8)
     add_doc_paragraph(doc, f"العنوان: {address}", size=16, align=WD_ALIGN_PARAGRAPH.RIGHT, space_after=8)
     add_doc_paragraph(doc, f"الهاتف: {phone}", size=16, align=WD_ALIGN_PARAGRAPH.RIGHT, space_after=38)
 
@@ -984,6 +1201,7 @@ def show_job_request_form():
     right_fields = [
         ("الاسم", "first_name"),
         ("اللقب", "last_name"),
+        ("تاريخ ومكان الميلاد", "birth_info"),
         ("العنوان الكامل", "address"),
         ("رقم الهاتف", "phone"),
         ("رقم بطاقة التعريف", "id_card"),
@@ -1238,6 +1456,8 @@ def show_job_request_preview():
 
     try:
         output_path = create_job_request_word()
+        archive_path = archive_generated_file(output_path)
+        save_or_update_client_from_form(archive_path)
         open_generated_file(output_path)
     except Exception as e:
         try:
