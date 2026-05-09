@@ -159,6 +159,7 @@ canvas.pack(fill="both", expand=True)
 
 background_photo = None
 home_card_photos = {}
+document_card_photos = {}
 current_page = "home"
 animation_running = False
 
@@ -419,10 +420,9 @@ def draw_back_button(command):
 
 
 def show_documents():
-    global current_page, animation_running
+    global current_page, document_card_photos
     current_page = "documents"
     clear_screen()
-    animation_running = True
 
     width = root.winfo_width()
     height = root.winfo_height()
@@ -430,128 +430,135 @@ def show_documents():
     if width < 10 or height < 10:
         width, height = 1280, 720
 
-    draw_image(resource_path("assets/background.jpg"), width, height)
+    canvas.create_rectangle(0, 0, width, height, fill="#ffffff", outline="#ffffff")
+    draw_home_sidebar("home")
 
-    right_x = int(width * 0.58)
-    menu_center_x = right_x + (width - right_x) // 2
+    sidebar_w = 120
+    content_x1 = sidebar_w
+    content_w = width - sidebar_w
+    center_x = content_x1 + content_w // 2
 
-    title_start_y = int(height * 0.31)
-    title_target_y = int(height * 0.15)
+    header_y = int(height * 0.16)
 
-    title_id = canvas.create_text(
-        menu_center_x,
-        title_start_y,
+    try:
+        icon_img = Image.open(resource_path("assets/documents.png")).convert("RGBA")
+        icon_img = icon_img.resize((92, 92), Image.LANCZOS)
+        doc_header_photo = ImageTk.PhotoImage(icon_img)
+        canvas.doc_header_photo = doc_header_photo
+        canvas.create_image(center_x - 70, header_y, image=doc_header_photo)
+    except Exception:
+        canvas.create_text(center_x - 70, header_y, text="▣", fill="#000000", font=("Arial", 64, "bold"))
+
+    canvas.create_text(
+        center_x + 40,
+        header_y - 3,
         text="وثائق",
-        fill="#f4f4f4",
-        font=("Arial", 30, "bold"),
-        anchor="center"
+        fill="#000000",
+        font=("Arial", 54, "bold")
     )
 
-    sub_items = [
-        ("طلب خطي", "written_request"),
-        ("تصريح شرفي", "honor_statement"),
-        ("سيرة ذاتية", "cv"),
-        ("فاتورة", "invoice"),
+    canvas.create_text(
+        center_x,
+        header_y + 58,
+        text="— إنشاء و تعديل مختلف الوثائق الإدارية —",
+        fill="#111111",
+        font=("Arial", 15, "bold")
+    )
+
+    cards = [
+        ("assets/written_request.png", "طلب خطي", "written_request"),
+        ("assets/honor_statement.png", "تصريح شرفي", "honor_statement"),
+        ("assets/cv.png", "سيرة ذاتية", "cv"),
+        ("assets/invoice.png", "فاتورة", "invoice"),
     ]
 
-    sub_texts = []
-    line_ids = []
+    document_card_photos = {}
 
-    start_y = int(height * 0.31)
-    gap = int(height * 0.135)
+    card_w = int(content_w * 0.19)
+    card_h = int(height * 0.34)
+    gap = int(content_w * 0.055)
+    total_w = card_w * 4 + gap * 3
+    start_x = center_x - total_w // 2
 
-    for index, (label, key) in enumerate(sub_items):
-        y = start_y + index * gap
-        start_x = width + 240
-        target_x = menu_center_x
+    card_y1 = int(height * 0.37)
+    card_y2 = card_y1 + card_h
 
-        text_id = canvas.create_text(
-            start_x,
-            y,
-            text=label,
-            fill="#e8e1d5",
-            font=("Arial", 24, "bold"),
-            anchor="center"
-        )
+    for i, (icon_path, title, key) in enumerate(cards):
+        x1 = start_x + i * (card_w + gap)
+        x2 = x1 + card_w
 
-        line_id = canvas.create_line(
-            width + 100,
-            y + int(gap * 0.43),
-            width + 520,
-            y + int(gap * 0.43),
-            fill="#8aa09c",
+        shadow = rounded_home_rect(
+            x1 + 8,
+            card_y1 + 12,
+            x2 + 8,
+            card_y2 + 12,
+            r=10,
+            fill="#d9d9d9",
+            outline="#d9d9d9",
             width=1
         )
 
-        sub_texts.append((text_id, key, target_x, y))
-        line_ids.append((line_id, right_x + 70, width - 70, y + int(gap * 0.43)))
+        card = rounded_home_rect(
+            x1,
+            card_y1,
+            x2,
+            card_y2,
+            r=10,
+            fill="#ffffff",
+            outline="#eeeeee",
+            width=1
+        )
 
-    def animate_title(step=0):
-        if not animation_running or current_page != "documents":
-            return
-
-        total_steps = 8
-        if step <= total_steps:
-            current_y = title_start_y + (title_target_y - title_start_y) * step / total_steps
-            size = int(30 + (54 - 30) * step / total_steps)
-            canvas.coords(title_id, menu_center_x, current_y)
-            canvas.itemconfig(title_id, font=("Arial", size, "bold"))
-            root.after(8, lambda: animate_title(step + 1))
-        else:
-            animate_sub_items(0)
-
-    def animate_sub_items(step=0):
-        if not animation_running or current_page != "documents":
-            return
-
-        total_steps = 10
-        if step <= total_steps:
-            for text_id, key, target_x, y in sub_texts:
-                start_x = width + 240
-                current_x = start_x + (target_x - start_x) * step / total_steps
-                canvas.coords(text_id, current_x, y)
-
-            for line_id, x1, x2, y in line_ids:
-                start_x1 = width + 100
-                start_x2 = width + 520
-                current_x1 = start_x1 + (x1 - start_x1) * step / total_steps
-                current_x2 = start_x2 + (x2 - start_x2) * step / total_steps
-                canvas.coords(line_id, current_x1, y, current_x2, y)
-
-            root.after(6, lambda: animate_sub_items(step + 1))
-        else:
-            bind_document_items()
-
-    def bind_document_items():
-        for text_id, key, target_x, y in sub_texts:
-            hitbox = canvas.create_rectangle(
-                right_x + 55,
-                y - 32,
-                width - 55,
-                y + 32,
-                fill="",
-                outline=""
+        try:
+            item_img = Image.open(resource_path(icon_path)).convert("RGBA")
+            item_img = item_img.resize((115, 115), Image.LANCZOS)
+            item_photo = ImageTk.PhotoImage(item_img)
+            document_card_photos[key] = item_photo
+            icon_id = canvas.create_image((x1 + x2) // 2, card_y1 + 88, image=item_photo)
+        except Exception:
+            icon_id = canvas.create_text(
+                (x1 + x2) // 2,
+                card_y1 + 88,
+                text="▣",
+                fill="#000000",
+                font=("Arial", 58, "bold")
             )
 
-            def on_enter(event, t=text_id):
-                canvas.itemconfig(t, fill="#d7c28a")
-                root.config(cursor="hand2")
+        title_id = canvas.create_text(
+            (x1 + x2) // 2,
+            card_y1 + 195,
+            text=title,
+            fill="#000000",
+            font=("Arial", 31, "bold")
+        )
 
-            def on_leave(event, t=text_id):
-                canvas.itemconfig(t, fill="#e8e1d5")
-                root.config(cursor="")
+        hitbox = canvas.create_rectangle(
+            x1,
+            card_y1,
+            x2,
+            card_y2,
+            fill="",
+            outline=""
+        )
 
-            def on_click(event, k=key):
+        def enter(event, c=card):
+            canvas.itemconfig(c, fill="#fafafa", outline="#dddddd")
+            root.config(cursor="hand2")
+
+        def leave(event, c=card):
+            canvas.itemconfig(c, fill="#ffffff", outline="#eeeeee")
+            root.config(cursor="")
+
+        def click(event, k=key):
+            if k == "written_request":
+                show_written_request()
+            else:
                 show_document_type(k)
 
-            for item in (text_id, hitbox):
-                canvas.tag_bind(item, "<Enter>", on_enter)
-                canvas.tag_bind(item, "<Leave>", on_leave)
-                canvas.tag_bind(item, "<Button-1>", on_click)
-
-        draw_back_button(show_home)
-
-    animate_title()
+        for item in (card, icon_id, title_id, hitbox):
+            canvas.tag_bind(item, "<Enter>", enter)
+            canvas.tag_bind(item, "<Leave>", leave)
+            canvas.tag_bind(item, "<Button-1>", click)
 
 
 def show_document_type(doc_type):
