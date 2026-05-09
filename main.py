@@ -181,6 +181,92 @@ def draw_image(path, width, height):
     canvas.create_image(0, 0, image=background_photo, anchor="nw")
 
 
+def draw_home_sidebar(active="home"):
+    width = root.winfo_width()
+    height = root.winfo_height()
+    sidebar_w = 120
+
+    canvas.create_rectangle(0, 0, sidebar_w, height, fill="#f7f7f7", outline="#e5e5e5")
+    canvas.create_line(sidebar_w, 0, sidebar_w, height, fill="#dedede", width=1)
+
+    canvas.create_rectangle(20, 22, 42, 44, fill="#000000", outline="#000000")
+    canvas.create_text(52, 33, text="IDARA DZ", fill="#111111", font=("Arial", 12, "bold"), anchor="w")
+
+    items = [
+        ("⌂", "الرئيسية", "home", 105),
+        ("⚙", "الإعدادات", "settings", 205),
+        ("ⓘ", "حول البرنامج", "about", 305),
+    ]
+
+    for icon, label, key, y in items:
+        is_active = active == key
+
+        if is_active:
+            bg = canvas.create_rectangle(8, y - 48, sidebar_w - 8, y + 44, fill="#000000", outline="#000000")
+            fill = "#ffffff"
+        else:
+            bg = canvas.create_rectangle(8, y - 48, sidebar_w - 8, y + 44, fill="#f7f7f7", outline="#f7f7f7")
+            fill = "#000000"
+
+        icon_id = canvas.create_text(sidebar_w // 2, y - 14, text=icon, fill=fill, font=("Arial", 28, "bold"))
+        label_id = canvas.create_text(sidebar_w // 2, y + 20, text=label, fill=fill, font=("Arial", 11, "bold"))
+
+        def enter(event, b=bg, active_state=is_active):
+            if not active_state:
+                canvas.itemconfig(b, fill="#ededed", outline="#ededed")
+            root.config(cursor="hand2")
+
+        def leave(event, b=bg, active_state=is_active):
+            if not active_state:
+                canvas.itemconfig(b, fill="#f7f7f7", outline="#f7f7f7")
+            root.config(cursor="")
+
+        def click(event, target=key):
+            if target == "home":
+                show_home()
+            elif target == "about":
+                show_about()
+            else:
+                show_settings_placeholder()
+
+        for item in (bg, icon_id, label_id):
+            canvas.tag_bind(item, "<Enter>", enter)
+            canvas.tag_bind(item, "<Leave>", leave)
+            canvas.tag_bind(item, "<Button-1>", click)
+
+    dark_y = height - 145
+    canvas.create_text(sidebar_w // 2, dark_y, text="☾", fill="#000000", font=("Arial", 26, "bold"))
+    canvas.create_text(sidebar_w // 2, dark_y + 32, text="الوضع الداكن", fill="#000000", font=("Arial", 10, "bold"))
+    canvas.create_line(16, height - 102, sidebar_w - 16, height - 102, fill="#dddddd")
+
+    exit_y = height - 62
+    exit_icon = canvas.create_text(sidebar_w // 2, exit_y - 12, text="↪", fill="#000000", font=("Arial", 24, "bold"))
+    exit_label = canvas.create_text(sidebar_w // 2, exit_y + 18, text="خروج", fill="#000000", font=("Arial", 10, "bold"))
+
+    def exit_enter(event):
+        root.config(cursor="hand2")
+
+    def exit_leave(event):
+        root.config(cursor="")
+
+    def exit_click(event):
+        root.destroy()
+
+    for item in (exit_icon, exit_label):
+        canvas.tag_bind(item, "<Enter>", exit_enter)
+        canvas.tag_bind(item, "<Leave>", exit_leave)
+        canvas.tag_bind(item, "<Button-1>", exit_click)
+
+
+def rounded_home_rect(x1, y1, x2, y2, r=16, fill="#ffffff", outline="#dddddd", width=1):
+    points = [
+        x1 + r, y1, x2 - r, y1, x2, y1, x2, y1 + r,
+        x2, y2 - r, x2, y2, x2 - r, y2, x1 + r, y2,
+        x1, y2, x1, y2 - r, x1, y1 + r, x1, y1
+    ]
+    return canvas.create_polygon(points, smooth=True, fill=fill, outline=outline, width=width)
+
+
 def show_home():
     global current_page
     current_page = "home"
@@ -192,62 +278,107 @@ def show_home():
     if width < 10 or height < 10:
         width, height = 1280, 720
 
-    draw_image(resource_path("assets/background.jpg"), width, height)
+    canvas.create_rectangle(0, 0, width, height, fill="#ffffff", outline="#ffffff")
+    draw_home_sidebar("home")
 
-    right_x = int(width * 0.58)
-    menu_center_x = right_x + (width - right_x) // 2
+    sidebar_w = 120
+    content_x1 = sidebar_w
+    content_w = width - sidebar_w
+    center_x = content_x1 + content_w // 2
 
-    menu_items = [
-        ("وثائق", "documents"),
-        ("خدمات إلكترونية", "electronic"),
-        ("أرشيف", "archive"),
-        ("حول البرنامج", "about"),
+    logo_y = int(height * 0.22)
+
+    # Logo image from assets/logo.png
+    try:
+        logo_img = Image.open(resource_path("assets/logo.png")).convert("RGBA")
+        logo_img = logo_img.resize((140, 140), Image.LANCZOS)
+        logo_photo = ImageTk.PhotoImage(logo_img)
+        canvas.logo_photo = logo_photo
+        canvas.create_image(center_x - 165, logo_y, image=logo_photo)
+    except Exception:
+        canvas.create_rectangle(center_x - 245, logo_y - 54, center_x - 160, logo_y + 54, fill="#000000", outline="#000000")
+        canvas.create_text(center_x - 202, logo_y, text="▰", fill="#ffffff", font=("Arial", 38, "bold"))
+
+    canvas.create_text(center_x - 105, logo_y, text="IDARA", fill="#000000", font=("Arial", 48, "bold"), anchor="w")
+    canvas.create_text(center_x + 95, logo_y, text="DZ", fill="#777777", font=("Arial", 48, "bold"), anchor="w")
+
+    subtitle_y = logo_y + 85
+    canvas.create_line(center_x - 190, subtitle_y, center_x - 120, subtitle_y, fill="#bbbbbb")
+    canvas.create_text(center_x, subtitle_y, text="خدمات إدارية بكل احترافية", fill="#555555", font=("Arial", 18, "bold"))
+    canvas.create_line(center_x + 120, subtitle_y, center_x + 190, subtitle_y, fill="#bbbbbb")
+
+    cards = [
+        ("▣", "وثائق", "إنشاء وتعديل مختلف الوثائق\nالإدارية بسهولة", "documents"),
+        ("◎", "خدمات الكترونية", "الوصول إلى الخدمات الإلكترونية\nوالمنصات الرسمية", "electronic"),
+        ("▤", "ارشيف", "إدارة وأرشفة الملفات والوثائق\nوالوصول إليها بسهولة", "archive"),
     ]
 
-    start_y = int(height * 0.31)
-    gap = int(height * 0.135)
+    card_w = int(content_w * 0.245)
+    card_h = int(height * 0.39)
+    gap = int(content_w * 0.04)
+    total_w = card_w * 3 + gap * 2
+    start_x = center_x - total_w // 2
+    card_y1 = int(height * 0.40)
+    card_y2 = card_y1 + card_h
 
-    for index, (label, key) in enumerate(menu_items):
-        y = start_y + index * gap
+    for i, (icon, title, desc, key) in enumerate(cards):
+        x1 = start_x + i * (card_w + gap)
+        x2 = x1 + card_w
 
-        text_id = canvas.create_text(
-            menu_center_x,
-            y,
-            text=label,
-            fill="#f4f4f4",
-            font=("Arial", 30, "bold"),
-            anchor="center"
-        )
+        card = rounded_home_rect(x1, card_y1, x2, card_y2, r=14, fill="#ffffff", outline="#dddddd", width=1)
+        icon_id = canvas.create_text((x1 + x2) // 2, card_y1 + 80, text=icon, fill="#000000", font=("Arial", 54, "bold"))
+        title_id = canvas.create_text((x1 + x2) // 2, card_y1 + 160, text=title, fill="#000000", font=("Arial", 27, "bold"))
+        desc_id = canvas.create_text((x1 + x2) // 2, card_y1 + 220, text=desc, fill="#666666", font=("Arial", 15, "bold"), justify="center")
 
-        hitbox = canvas.create_rectangle(
-            right_x + 55,
-            y - 35,
-            width - 55,
-            y + 35,
-            fill="",
-            outline=""
-        )
+        btn_w = int(card_w * 0.62)
+        btn_h = 38
+        btn_y = card_y2 - 60
+        btn_x1 = (x1 + x2) // 2 - btn_w // 2
+        btn_x2 = (x1 + x2) // 2 + btn_w // 2
 
-        def on_enter(event, t=text_id):
-            canvas.itemconfig(t, fill="#d7c28a")
+        btn = rounded_home_rect(btn_x1, btn_y - btn_h // 2, btn_x2, btn_y + btn_h // 2, r=6, fill="#000000", outline="#000000", width=1)
+        btn_text = canvas.create_text((btn_x1 + btn_x2) // 2 - 18, btn_y, text="فتح", fill="#ffffff", font=("Arial", 13, "bold"))
+        arrow = canvas.create_text(btn_x2 - 42, btn_y, text="→", fill="#ffffff", font=("Arial", 22, "bold"))
+
+        def enter(event, c=card, b=btn):
+            canvas.itemconfig(c, fill="#fafafa")
+            canvas.itemconfig(b, fill="#111111", outline="#111111")
             root.config(cursor="hand2")
 
-        def on_leave(event, t=text_id):
-            canvas.itemconfig(t, fill="#f4f4f4")
+        def leave(event, c=card, b=btn):
+            canvas.itemconfig(c, fill="#ffffff")
+            canvas.itemconfig(b, fill="#000000", outline="#000000")
             root.config(cursor="")
 
-        def on_click(event, k=key):
-            if k == "about":
-                show_about()
-            elif k == "documents":
+        def click(event, k=key):
+            if k == "documents":
                 show_documents()
             else:
                 show_section(k)
 
-        for item in (text_id, hitbox):
-            canvas.tag_bind(item, "<Enter>", on_enter)
-            canvas.tag_bind(item, "<Leave>", on_leave)
-            canvas.tag_bind(item, "<Button-1>", on_click)
+        for item in (card, icon_id, title_id, desc_id, btn, btn_text, arrow):
+            canvas.tag_bind(item, "<Enter>", enter)
+            canvas.tag_bind(item, "<Leave>", leave)
+            canvas.tag_bind(item, "<Button-1>", click)
+
+    canvas.create_text(center_x, height - 55, text="© 2024 IDARA DZ - جميع الحقوق محفوظة", fill="#777777", font=("Arial", 13))
+
+
+def show_settings_placeholder():
+    global current_page
+    current_page = "settings"
+    clear_screen()
+
+    width = root.winfo_width()
+    height = root.winfo_height()
+
+    canvas.create_rectangle(0, 0, width, height, fill="#ffffff", outline="#ffffff")
+    draw_home_sidebar("settings")
+
+    center_x = 120 + (width - 120) // 2
+
+    canvas.create_text(center_x, int(height * 0.28), text="الإعدادات", fill="#000000", font=("Arial", 44, "bold"))
+    canvas.create_text(center_x, int(height * 0.43), text="سنقوم ببناء هذا القسم لاحقًا.", fill="#666666", font=("Arial", 22, "bold"))
 
 
 def draw_back_button(command):
@@ -1506,12 +1637,30 @@ def show_about():
     width = root.winfo_width()
     height = root.winfo_height()
 
-    if width < 10 or height < 10:
-        width, height = 1280, 720
+    canvas.create_rectangle(0, 0, width, height, fill="#ffffff", outline="#ffffff")
+    draw_home_sidebar("about")
 
-    draw_image(resource_path("assets/about.jpg"), width, height)
+    center_x = 120 + (width - 120) // 2
 
-    draw_back_button(show_home)
+    canvas.create_text(center_x, int(height * 0.20), text="حول البرنامج", fill="#000000", font=("Arial", 44, "bold"))
+
+    text = (
+        "IDARA DZ\n\n"
+        "برنامج مكتبي مخصص لتنظيم خدمات المكتبة والخدمات الإدارية.\n"
+        "يساعد على تسيير الوثائق، الخدمات الإلكترونية، والأرشيف بطريقة سهلة ومنظمة.\n\n"
+        "الإصدار: 1.0.0\n"
+        "© 2026"
+    )
+
+    canvas.create_text(
+        center_x,
+        int(height * 0.48),
+        text=text,
+        fill="#555555",
+        font=("Arial", 22, "bold"),
+        justify="center",
+        width=int((width - 120) * 0.70)
+    )
 
 
 def on_resize(event):
@@ -1520,6 +1669,8 @@ def on_resize(event):
             show_home()
         elif current_page == "about":
             show_about()
+        elif current_page == "settings":
+            show_settings_placeholder()
         elif current_page == "documents":
             show_documents()
         elif current_page == "written_request":
