@@ -1417,7 +1417,7 @@ def draw_request_type_underline(x, y, w):
 
 
 written_request_items = [
-    "طلب توظيف","طلب توظيف","مسابقة الجمارك","مسابقة الشرطة",
+    "طلب توظيف 1","طلب توظيف","مسابقة الجمارك","مسابقة الشرطة",
     "مسابقة الحماية المدنية","عقود ماقبل التشغيل","مسابقة الماستر","مسابقة على اساس الشهادة",
     "مسابقة على اساس الشهادة","مسابقة على اساس الاختبار","طلب استخلاف","طلب توظيف عام",
     "طلب استقالة","طلب سكن","طلب تسوية وضعية","طلب تحويل اداري",
@@ -1574,7 +1574,10 @@ def show_written_request_menu():
 
             def click(e, t=title):
                 job_form_entries["request_type"] = t
-                show_job_request_form()
+                if t == "طلب توظيف 1":
+                    show_job_request_1_form()
+                else:
+                    show_job_request_form()
 
             bind_items = [card, txt]
             if subtxt:
@@ -1624,6 +1627,212 @@ def scroll_written_request_menu(event):
     written_request_menu_scroll = max(0, min(written_request_menu_scroll, max_scroll))
     show_written_request_menu()
 
+
+
+job_request_1_entries = {}
+
+
+def make_job1_entry(x, y, w, placeholder, field_key):
+    value = job_request_1_entries.get(field_key, "")
+
+    canvas.create_line(
+        x - w // 2,
+        y + 18,
+        x + w // 2,
+        y + 18,
+        fill="#b8b8b8",
+        width=2
+    )
+
+    entry = tk.Entry(
+        root,
+        font=("Arial", 16, "bold"),
+        justify="right",
+        bd=0,
+        bg="#ffffff",
+        fg="#111111",
+        insertbackground="#111111"
+    )
+
+    if value:
+        entry.insert(0, value)
+        entry.config(fg="#111111")
+    else:
+        entry.insert(0, placeholder)
+        entry.config(fg="#b5b5b5")
+
+    def focus_in(event):
+        if entry.get() == placeholder:
+            entry.delete(0, "end")
+            entry.config(fg="#111111")
+
+    def focus_out(event):
+        if not entry.get().strip():
+            entry.delete(0, "end")
+            entry.insert(0, placeholder)
+            entry.config(fg="#b5b5b5")
+            job_request_1_entries[field_key] = ""
+
+    def save_value(event=None):
+        val = entry.get()
+        if val == placeholder:
+            job_request_1_entries[field_key] = ""
+        else:
+            job_request_1_entries[field_key] = val
+
+    entry.bind("<FocusIn>", focus_in)
+    entry.bind("<FocusOut>", focus_out)
+    entry.bind("<KeyRelease>", save_value)
+
+    canvas.create_window(x, y, window=entry, width=w, height=34)
+    return entry
+
+
+def show_job_request_1_form():
+    global current_page
+    current_page = "job_request_1_form"
+    clear_screen()
+
+    width = root.winfo_width()
+    height = root.winfo_height()
+
+    if width < 10 or height < 10:
+        width, height = 1280, 720
+
+    canvas.create_rectangle(0, 0, width, height, fill="#ffffff", outline="#ffffff")
+    draw_home_sidebar("home")
+
+    right_col_x = int(width * 0.80)
+    left_col_x = int(width * 0.34)
+    field_w = int(width * 0.29)
+
+    start_y = int(height * 0.12)
+    gap = int(height * 0.112)
+
+    right_fields = [
+        ("الاسم", "first_name"),
+        ("اللقب", "last_name"),
+        ("رقم الهاتف", "phone"),
+        ("العنوان", "address"),
+    ]
+
+    left_fields = [
+        ("السيد / الجهة المستقبلة", "recipient"),
+        ("المنصب", "position"),
+        ("مدة الخبرة", "experience_duration"),
+        ("الشهادة", "degree"),
+    ]
+
+    for index, (placeholder, key) in enumerate(right_fields):
+        make_job1_entry(right_col_x, start_y + index * gap, field_w, placeholder, key)
+
+    for index, (placeholder, key) in enumerate(left_fields):
+        make_job1_entry(left_col_x, start_y + index * gap, field_w, placeholder, key)
+
+    preview_text = canvas.create_text(
+        int(width * 0.90),
+        int(height * 0.88),
+        text="معاينة",
+        fill="#55bfff",
+        font=("Arial", 27, "bold"),
+        anchor="center"
+    )
+
+    def preview_enter(event):
+        canvas.itemconfig(preview_text, fill="#1d9fee")
+        root.config(cursor="hand2")
+
+    def preview_leave(event):
+        canvas.itemconfig(preview_text, fill="#55bfff")
+        root.config(cursor="")
+
+    def preview_click(event):
+        create_job_request_1_word()
+
+    canvas.tag_bind(preview_text, "<Enter>", preview_enter)
+    canvas.tag_bind(preview_text, "<Leave>", preview_leave)
+    canvas.tag_bind(preview_text, "<Button-1>", preview_click)
+
+
+def set_job1_run_font(run, size=14, bold=False):
+    run.font.name = "Arial"
+    run._element.rPr.rFonts.set(qn("w:eastAsia"), "Arial")
+    run.font.size = Pt(size)
+    run.bold = bold
+
+
+def add_job1_paragraph(doc, text="", size=14, bold=False, align=WD_ALIGN_PARAGRAPH.RIGHT, space_after=10):
+    p = doc.add_paragraph()
+    p.alignment = align
+    p.paragraph_format.space_after = Pt(space_after)
+    run = p.add_run(text)
+    set_job1_run_font(run, size=size, bold=bold)
+    return p
+
+
+def create_job_request_1_word():
+    output_dir = os.path.join(os.path.expanduser("~"), "IDARA_DZ_Outputs")
+    os.makedirs(output_dir, exist_ok=True)
+
+    first_name = job_request_1_entries.get("first_name", "").strip()
+    last_name = job_request_1_entries.get("last_name", "").strip()
+    phone = job_request_1_entries.get("phone", "").strip()
+    address = job_request_1_entries.get("address", "").strip()
+    recipient = job_request_1_entries.get("recipient", "").strip()
+    position = job_request_1_entries.get("position", "").strip()
+    experience_duration = job_request_1_entries.get("experience_duration", "").strip()
+    degree = job_request_1_entries.get("degree", "").strip()
+
+    full_name = f"{last_name} {first_name}".strip()
+    safe_name = full_name if full_name else "بدون_اسم"
+    safe_name = safe_name.replace("/", "-").replace("\\", "-").replace(":", "-").replace(" ", "_")
+    output_path = os.path.join(output_dir, f"طلب_توظيف_1_{safe_name}.docx")
+
+    doc = Document()
+
+    section = doc.sections[0]
+    section.top_margin = Cm(1.6)
+    section.bottom_margin = Cm(1.6)
+    section.right_margin = Cm(1.8)
+    section.left_margin = Cm(1.8)
+
+    p = doc.add_paragraph()
+    p.alignment = WD_ALIGN_PARAGRAPH.LEFT
+    p.paragraph_format.space_after = Pt(18)
+    r = p.add_run("التاريخ: -- / -- / 2026.")
+    set_job1_run_font(r, 13, True)
+
+    add_job1_paragraph(doc, f"الاسم: {first_name} ................................", 14, True, WD_ALIGN_PARAGRAPH.RIGHT, 4)
+    add_job1_paragraph(doc, f"اللقب: {last_name} .................................", 14, True, WD_ALIGN_PARAGRAPH.RIGHT, 4)
+    add_job1_paragraph(doc, f"الهاتف: {phone} ................................", 14, True, WD_ALIGN_PARAGRAPH.RIGHT, 4)
+    add_job1_paragraph(doc, f"العنوان: {address} .................................", 14, True, WD_ALIGN_PARAGRAPH.RIGHT, 28)
+
+    add_job1_paragraph(doc, f"الى السيد: {recipient} ................................", 14, True, WD_ALIGN_PARAGRAPH.LEFT, 45)
+
+    add_job1_paragraph(doc, "الموضوع:", 15, True, WD_ALIGN_PARAGRAPH.RIGHT, 8)
+    add_job1_paragraph(doc, "طلب توظيف", 14, True, WD_ALIGN_PARAGRAPH.CENTER, 38)
+
+    body = (
+        f"لي عظيم الشرف أن أتقدم إلى سيادتكم بطلبي هذا والمتمثل في طلب توظيف في منصب {position}، "
+        f"وأحيطكم علما أني مستوفي لجميع الشروط المطلوبة ومن بينها شهادة و خبرة مهنية لمدة {experience_duration} "
+        f"في المجال {degree}، وتجدون التوضيح المفصل في السيرة الذاتية الملحقة مع هذا الطلب."
+    )
+
+    add_job1_paragraph(doc, body, 14, False, WD_ALIGN_PARAGRAPH.RIGHT, 20)
+    add_job1_paragraph(doc, "في انتظار ردكم تقبلوا منا سيدي فائق التقدير والاحترام.", 14, False, WD_ALIGN_PARAGRAPH.CENTER, 110)
+    add_job1_paragraph(doc, "امضاء المعني", 14, True, WD_ALIGN_PARAGRAPH.LEFT, 8)
+
+    doc.save(output_path)
+
+    try:
+        if sys.platform.startswith("win"):
+            os.startfile(output_path)
+        elif sys.platform == "darwin":
+            subprocess.Popen(["open", output_path])
+        else:
+            subprocess.Popen(["xdg-open", output_path])
+    except Exception:
+        pass
 
 def make_light_underline_entry(x, y, w, placeholder, field_key):
     value = job_form_entries.get(field_key, "")
@@ -2000,6 +2209,8 @@ def on_resize(event):
             show_written_request()
         elif current_page == "job_request_form":
             show_job_request_form()
+        elif current_page == "job_request_1_form":
+            show_job_request_1_form()
         elif current_page == "written_request_menu":
             show_written_request_menu()
         elif current_page == "job_request_preview":
