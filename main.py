@@ -354,7 +354,7 @@ def show_home():
 
         def click(event, k=key):
             if k == "documents":
-                show_documents()
+                show_job_request_form()
             else:
                 show_section(k)
 
@@ -420,145 +420,7 @@ def draw_back_button(command):
 
 
 def show_documents():
-    global current_page, document_card_photos
-    current_page = "documents"
-    clear_screen()
-
-    width = root.winfo_width()
-    height = root.winfo_height()
-
-    if width < 10 or height < 10:
-        width, height = 1280, 720
-
-    canvas.create_rectangle(0, 0, width, height, fill="#ffffff", outline="#ffffff")
-    draw_home_sidebar("home")
-
-    sidebar_w = 120
-    content_x1 = sidebar_w
-    content_w = width - sidebar_w
-    center_x = content_x1 + content_w // 2
-
-    header_y = int(height * 0.16)
-
-    try:
-        icon_img = Image.open(resource_path("assets/documents.png")).convert("RGBA")
-        icon_img = icon_img.resize((92, 92), Image.LANCZOS)
-        doc_header_photo = ImageTk.PhotoImage(icon_img)
-        canvas.doc_header_photo = doc_header_photo
-        canvas.create_image(center_x - 70, header_y, image=doc_header_photo)
-    except Exception:
-        canvas.create_text(center_x - 70, header_y, text="▣", fill="#000000", font=("Arial", 64, "bold"))
-
-    canvas.create_text(
-        center_x + 40,
-        header_y - 3,
-        text="وثائق",
-        fill="#000000",
-        font=("Arial", 54, "bold")
-    )
-
-    canvas.create_text(
-        center_x,
-        header_y + 58,
-        text="— إنشاء و تعديل مختلف الوثائق الإدارية —",
-        fill="#111111",
-        font=("Arial", 15, "bold")
-    )
-
-    cards = [
-        ("assets/written_request.png", "طلب خطي", "written_request"),
-        ("assets/honor_statement.png", "تصريح شرفي", "honor_statement"),
-        ("assets/cv.png", "سيرة ذاتية", "cv"),
-        ("assets/invoice.png", "فاتورة", "invoice"),
-    ]
-
-    document_card_photos = {}
-
-    card_w = int(content_w * 0.19)
-    card_h = int(height * 0.34)
-    gap = int(content_w * 0.055)
-    total_w = card_w * 4 + gap * 3
-    start_x = center_x - total_w // 2
-
-    card_y1 = int(height * 0.37)
-    card_y2 = card_y1 + card_h
-
-    for i, (icon_path, title, key) in enumerate(cards):
-        x1 = start_x + i * (card_w + gap)
-        x2 = x1 + card_w
-
-        shadow = rounded_home_rect(
-            x1 + 8,
-            card_y1 + 12,
-            x2 + 8,
-            card_y2 + 12,
-            r=10,
-            fill="#d9d9d9",
-            outline="#d9d9d9",
-            width=1
-        )
-
-        card = rounded_home_rect(
-            x1,
-            card_y1,
-            x2,
-            card_y2,
-            r=10,
-            fill="#ffffff",
-            outline="#eeeeee",
-            width=1
-        )
-
-        try:
-            item_img = Image.open(resource_path(icon_path)).convert("RGBA")
-            item_img = item_img.resize((115, 115), Image.LANCZOS)
-            item_photo = ImageTk.PhotoImage(item_img)
-            document_card_photos[key] = item_photo
-            icon_id = canvas.create_image((x1 + x2) // 2, card_y1 + 88, image=item_photo)
-        except Exception:
-            icon_id = canvas.create_text(
-                (x1 + x2) // 2,
-                card_y1 + 88,
-                text="▣",
-                fill="#000000",
-                font=("Arial", 58, "bold")
-            )
-
-        title_id = canvas.create_text(
-            (x1 + x2) // 2,
-            card_y1 + 195,
-            text=title,
-            fill="#000000",
-            font=("Arial", 31, "bold")
-        )
-
-        hitbox = canvas.create_rectangle(
-            x1,
-            card_y1,
-            x2,
-            card_y2,
-            fill="",
-            outline=""
-        )
-
-        def enter(event, c=card):
-            canvas.itemconfig(c, fill="#fafafa", outline="#dddddd")
-            root.config(cursor="hand2")
-
-        def leave(event, c=card):
-            canvas.itemconfig(c, fill="#ffffff", outline="#eeeeee")
-            root.config(cursor="")
-
-        def click(event, k=key):
-            if k == "written_request":
-                show_written_request()
-            else:
-                show_document_type(k)
-
-        for item in (card, icon_id, title_id, hitbox):
-            canvas.tag_bind(item, "<Enter>", enter)
-            canvas.tag_bind(item, "<Leave>", leave)
-            canvas.tag_bind(item, "<Button-1>", click)
+    show_job_request_form()
 
 
 def show_document_type(doc_type):
@@ -1415,8 +1277,123 @@ def draw_request_type_underline(x, y, w):
         draw_request_type_dropdown(x, y + 28, w)
 
 
+def make_light_underline_entry(x, y, w, placeholder, field_key):
+    value = job_form_entries.get(field_key, "")
+
+    canvas.create_line(
+        x - w // 2,
+        y + 18,
+        x + w // 2,
+        y + 18,
+        fill="#b8b8b8",
+        width=2
+    )
+
+    entry = tk.Entry(
+        root,
+        font=("Arial", 16, "bold"),
+        justify="right",
+        bd=0,
+        bg="#ffffff",
+        fg="#111111",
+        insertbackground="#111111"
+    )
+
+    if value:
+        entry.insert(0, value)
+        entry.config(fg="#111111")
+    else:
+        entry.insert(0, placeholder)
+        entry.config(fg="#b5b5b5")
+
+    def focus_in(event):
+        if entry.get() == placeholder:
+            entry.delete(0, "end")
+            entry.config(fg="#111111")
+
+    def focus_out(event):
+        if not entry.get().strip():
+            entry.delete(0, "end")
+            entry.insert(0, placeholder)
+            entry.config(fg="#b5b5b5")
+            job_form_entries[field_key] = ""
+            root.after(200, clear_suggestions)
+
+    def save_value(event=None):
+        val = entry.get()
+        if val == placeholder:
+            job_form_entries[field_key] = ""
+            clear_suggestions()
+        else:
+            job_form_entries[field_key] = val
+            draw_client_suggestions(x, y, w, field_key, val)
+
+    entry.bind("<FocusIn>", focus_in)
+    entry.bind("<FocusOut>", focus_out)
+    entry.bind("<KeyRelease>", save_value)
+
+    canvas.create_window(x, y, window=entry, width=w, height=34)
+    return entry
+
+
+def draw_light_request_type_field(x, y, w):
+    selected_value = job_form_entries.get("request_type", "")
+
+    canvas.create_line(
+        x - w // 2,
+        y + 18,
+        x + w // 2,
+        y + 18,
+        fill="#b8b8b8",
+        width=2
+    )
+
+    arrow = canvas.create_text(
+        x - w // 2 + 18,
+        y,
+        text="▼",
+        fill="#b5b5b5",
+        font=("Arial", 18, "bold")
+    )
+
+    text = canvas.create_text(
+        x + w // 2,
+        y,
+        text=selected_value if selected_value else "نوع الطلب",
+        fill="#111111" if selected_value else "#b5b5b5",
+        font=("Arial", 16, "bold"),
+        anchor="e"
+    )
+
+    hitbox = canvas.create_rectangle(
+        x - w // 2,
+        y - 18,
+        x + w // 2,
+        y + 25,
+        fill="",
+        outline=""
+    )
+
+    def enter(event):
+        root.config(cursor="hand2")
+
+    def leave(event):
+        root.config(cursor="")
+
+    def click(event):
+        open_request_type_dropdown()
+
+    for item in (arrow, text, hitbox):
+        canvas.tag_bind(item, "<Enter>", enter)
+        canvas.tag_bind(item, "<Leave>", leave)
+        canvas.tag_bind(item, "<Button-1>", click)
+
+    if request_type_dropdown_open:
+        draw_request_type_dropdown(x, y + 28, w)
+
+
 def show_job_request_form():
-    global current_page, job_form_entries
+    global current_page
     current_page = "job_request_form"
     clear_screen()
 
@@ -1426,44 +1403,47 @@ def show_job_request_form():
     if width < 10 or height < 10:
         width, height = 1280, 720
 
-    canvas.create_rectangle(0, 0, width, height, fill="#173b38", outline="#173b38")
+    # White form page exactly like the requested screenshot
+    canvas.create_rectangle(0, 0, width, height, fill="#ffffff", outline="#ffffff")
+    draw_home_sidebar("home")
 
-    right_col_x = int(width * 0.79)
-    left_col_x = int(width * 0.31)
+    sidebar_w = 120
+    content_x1 = sidebar_w
+    content_w = width - sidebar_w
+    center_x = content_x1 + content_w // 2
 
-    title_y = int(height * 0.055)
+    # Header logo
+    logo_y = int(height * 0.055)
+    try:
+        logo_img = Image.open(resource_path("assets/logo.png")).convert("RGBA")
+        logo_img = logo_img.resize((280, 105), Image.LANCZOS)
+        logo_photo = ImageTk.PhotoImage(logo_img)
+        canvas.form_logo_photo = logo_photo
+        canvas.create_image(center_x, logo_y, image=logo_photo)
+    except Exception:
+        canvas.create_text(center_x, logo_y, text="IDARA DZ", fill="#111111", font=("Arial", 38, "bold"))
 
-    canvas.create_text(
-        right_col_x,
-        title_y,
-        text="المعلومات الشخصية",
-        fill="#f4f4f4",
-        font=("Arial", 22, "bold")
-    )
-
-    canvas.create_text(
-        left_col_x,
-        title_y,
-        text="معلومات مختلفة أخرى",
-        fill="#f4f4f4",
-        font=("Arial", 22, "bold")
-    )
-
+    # Column positions and field geometry
+    right_col_x = int(width * 0.80)
+    left_col_x = int(width * 0.34)
     field_w = int(width * 0.29)
-    start_y = int(height * 0.145)
-    gap = int(height * 0.105)
 
+    start_y = int(height * 0.12)
+    gap = int(height * 0.112)
+
+    # Right column
     right_fields = [
         ("الاسم", "first_name"),
         ("اللقب", "last_name"),
-        ("تاريخ ومكان الازدياد", "birth_info"),
+        ("تاريخ و مكان الميلاد", "birth_info"),
         ("العنوان الكامل", "address"),
-        ("رقم الهاتف", "phone"),
         ("رقم بطاقة التعريف", "id_card"),
+        ("رقم الهاتف", "phone"),
     ]
 
+    # Left column
     left_fields = [
-        ("إلى السيد/الجهة المستقبلة", "recipient"),
+        ("السيد/ الجهة المستقبلة", "recipient"),
         ("المنصب", "position"),
         ("الشهادة", "degree"),
         ("التخصص", "specialty"),
@@ -1472,31 +1452,43 @@ def show_job_request_form():
     ]
 
     for index, (placeholder, key) in enumerate(right_fields):
-        make_underline_entry(right_col_x, start_y + index * gap, field_w, placeholder, key)
+        make_light_underline_entry(
+            right_col_x,
+            start_y + index * gap,
+            field_w,
+            placeholder,
+            key
+        )
 
     for index, (placeholder, key) in enumerate(left_fields):
         y = start_y + index * gap
 
         if key == "request_type":
-            draw_request_type_underline(left_col_x, y, field_w)
+            draw_light_request_type_field(left_col_x, y, field_w)
         else:
-            make_underline_entry(left_col_x, y, field_w, placeholder, key)
+            make_light_underline_entry(
+                left_col_x,
+                y,
+                field_w,
+                placeholder,
+                key
+            )
 
-    # Invisible date picker button over date field left edge
+    # Calendar icon next to date, like the screenshot
     date_y = start_y + 4 * gap
-    cal_text = canvas.create_text(
-        left_col_x - field_w // 2 + 28,
+    cal_icon = canvas.create_text(
+        left_col_x - field_w // 2 + 24,
         date_y,
-        text="📅",
-        fill="#8f9996",
-        font=("Arial", 18, "bold")
+        text="▣",
+        fill="#000000",
+        font=("Arial", 28, "bold")
     )
 
     cal_hitbox = canvas.create_rectangle(
         left_col_x - field_w // 2,
-        date_y - 18,
-        left_col_x - field_w // 2 + 55,
-        date_y + 22,
+        date_y - 22,
+        left_col_x - field_w // 2 + 58,
+        date_y + 25,
         fill="",
         outline=""
     )
@@ -1504,52 +1496,36 @@ def show_job_request_form():
     def open_cal(event):
         show_calendar_picker()
 
-    for item in (cal_text, cal_hitbox):
+    for item in (cal_icon, cal_hitbox):
         canvas.tag_bind(item, "<Enter>", lambda e: root.config(cursor="hand2"))
         canvas.tag_bind(item, "<Leave>", lambda e: root.config(cursor=""))
         canvas.tag_bind(item, "<Button-1>", open_cal)
 
-    btn_y = int(height * 0.86)
-    btn_w = 225
-    btn_h = 74
-    btn_center_x = width // 2
-
-    preview_btn = rounded_rect(
-        btn_center_x - btn_w // 2,
-        btn_y - btn_h // 2,
-        btn_center_x + btn_w // 2,
-        btn_y + btn_h // 2,
-        r=36,
-        fill="#f3eeee",
-        outline="#d9d1d1",
-        width=2
-    )
-
+    # Preview text button bottom right
     preview_text = canvas.create_text(
-        btn_center_x,
-        btn_y,
+        int(width * 0.90),
+        int(height * 0.88),
         text="معاينة",
-        fill="#173b38",
-        font=("Arial", 28, "bold")
+        fill="#55bfff",
+        font=("Arial", 27, "bold"),
+        anchor="center"
     )
 
-    def btn_enter(event):
-        canvas.itemconfig(preview_btn, fill="#ffffff", outline="#ffffff")
+    def preview_enter(event):
+        canvas.itemconfig(preview_text, fill="#1d9fee")
         root.config(cursor="hand2")
 
-    def btn_leave(event):
-        canvas.itemconfig(preview_btn, fill="#f3eeee", outline="#d9d1d1")
+    def preview_leave(event):
+        canvas.itemconfig(preview_text, fill="#55bfff")
         root.config(cursor="")
 
-    def btn_click(event):
+    def preview_click(event):
         show_job_request_preview()
 
-    for item in (preview_btn, preview_text):
-        canvas.tag_bind(item, "<Enter>", btn_enter)
-        canvas.tag_bind(item, "<Leave>", btn_leave)
-        canvas.tag_bind(item, "<Button-1>", btn_click)
+    canvas.tag_bind(preview_text, "<Enter>", preview_enter)
+    canvas.tag_bind(preview_text, "<Leave>", preview_leave)
+    canvas.tag_bind(preview_text, "<Button-1>", preview_click)
 
-    draw_back_button(show_written_request)
 
 def scroll_job_form(event):
     global job_form_scroll
