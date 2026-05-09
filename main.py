@@ -1161,6 +1161,121 @@ def create_job_request_word():
     return output_path
 
 
+def make_underline_entry(x, y, w, placeholder, field_key):
+    value = job_form_entries.get(field_key, "")
+
+    line = canvas.create_line(
+        x - w // 2,
+        y + 18,
+        x + w // 2,
+        y + 18,
+        fill="#b9c3bf",
+        width=2
+    )
+
+    entry = tk.Entry(
+        root,
+        font=("Arial", 17, "bold"),
+        justify="right",
+        bd=0,
+        bg="#173b38",
+        fg="#f4f4f4",
+        insertbackground="#f4f4f4"
+    )
+
+    if value:
+        entry.insert(0, value)
+        entry.config(fg="#f4f4f4")
+    else:
+        entry.insert(0, placeholder)
+        entry.config(fg="#8f9996")
+
+    def focus_in(event):
+        if entry.get() == placeholder:
+            entry.delete(0, "end")
+            entry.config(fg="#f4f4f4")
+
+    def focus_out(event):
+        if not entry.get().strip():
+            entry.delete(0, "end")
+            entry.insert(0, placeholder)
+            entry.config(fg="#8f9996")
+            job_form_entries[field_key] = ""
+            root.after(200, clear_suggestions)
+
+    def save_value(event=None):
+        val = entry.get()
+        if val == placeholder:
+            job_form_entries[field_key] = ""
+            clear_suggestions()
+        else:
+            job_form_entries[field_key] = val
+            draw_client_suggestions(x, y, w, field_key, val)
+
+    entry.bind("<FocusIn>", focus_in)
+    entry.bind("<FocusOut>", focus_out)
+    entry.bind("<KeyRelease>", save_value)
+
+    canvas.create_window(x, y, window=entry, width=w, height=36)
+    return entry
+
+
+def draw_request_type_underline(x, y, w):
+    selected_value = job_form_entries.get("request_type", "")
+
+    canvas.create_line(
+        x - w // 2,
+        y + 18,
+        x + w // 2,
+        y + 18,
+        fill="#b9c3bf",
+        width=2
+    )
+
+    arrow = canvas.create_text(
+        x - w // 2 + 28,
+        y,
+        text="▾",
+        fill="#555555",
+        font=("Arial", 18, "bold")
+    )
+
+    text = canvas.create_text(
+        x + w // 2,
+        y,
+        text=selected_value if selected_value else "نوع الطلب",
+        fill="#f4f4f4" if selected_value else "#8f9996",
+        font=("Arial", 17, "bold"),
+        anchor="e"
+    )
+
+    hitbox = canvas.create_rectangle(
+        x - w // 2,
+        y - 18,
+        x + w // 2,
+        y + 25,
+        fill="",
+        outline=""
+    )
+
+    def enter(event):
+        root.config(cursor="hand2")
+
+    def leave(event):
+        root.config(cursor="")
+
+    def click(event):
+        open_request_type_dropdown()
+
+    for item in (arrow, text, hitbox):
+        canvas.tag_bind(item, "<Enter>", enter)
+        canvas.tag_bind(item, "<Leave>", leave)
+        canvas.tag_bind(item, "<Button-1>", click)
+
+    if request_type_dropdown_open:
+        draw_request_type_dropdown(x, y + 28, w)
+
+
 def show_job_request_form():
     global current_page, job_form_entries
     current_page = "job_request_form"
@@ -1174,17 +1289,17 @@ def show_job_request_form():
 
     canvas.create_rectangle(0, 0, width, height, fill="#173b38", outline="#173b38")
 
-    right_col_x = int(width * 0.78)
-    left_col_x = int(width * 0.30)
+    right_col_x = int(width * 0.79)
+    left_col_x = int(width * 0.31)
 
-    title_y = int(height * 0.08)
+    title_y = int(height * 0.055)
 
     canvas.create_text(
         right_col_x,
         title_y,
         text="المعلومات الشخصية",
         fill="#f4f4f4",
-        font=("Arial", 25, "bold")
+        font=("Arial", 22, "bold")
     )
 
     canvas.create_text(
@@ -1192,87 +1307,80 @@ def show_job_request_form():
         title_y,
         text="معلومات مختلفة أخرى",
         fill="#f4f4f4",
-        font=("Arial", 25, "bold")
+        font=("Arial", 22, "bold")
     )
 
-    field_w = int(width * 0.34)
-    field_h = 60
+    field_w = int(width * 0.29)
+    start_y = int(height * 0.145)
+    gap = int(height * 0.105)
 
     right_fields = [
         ("الاسم", "first_name"),
         ("اللقب", "last_name"),
-        ("تاريخ ومكان الميلاد", "birth_info"),
+        ("تاريخ ومكان الازدياد", "birth_info"),
         ("العنوان الكامل", "address"),
         ("رقم الهاتف", "phone"),
         ("رقم بطاقة التعريف", "id_card"),
     ]
 
     left_fields = [
-        ("إلى السيد [ المدير / الجهة المستقبلة ]", "recipient"),
-        ("المنصب المطلوب", "position"),
-        ("الشهادة / المؤهلات", "degree"),
+        ("إلى السيد/الجهة المستقبلة", "recipient"),
+        ("المنصب", "position"),
+        ("الشهادة", "degree"),
         ("التخصص", "specialty"),
         ("تاريخ الطلب", "date"),
         ("نوع الطلب", "request_type"),
     ]
 
-    start_y = int(height * 0.16)
-    gap = int(height * 0.115)
-
     for index, (placeholder, key) in enumerate(right_fields):
-        make_placeholder_entry(right_col_x, start_y + index * gap, field_w, field_h, placeholder, key)
+        make_underline_entry(right_col_x, start_y + index * gap, field_w, placeholder, key)
 
     for index, (placeholder, key) in enumerate(left_fields):
         y = start_y + index * gap
 
-        if key == "date":
-            make_placeholder_entry(left_col_x + 25, y, field_w - 60, field_h, placeholder, key)
-
-            cal_box = rounded_rect(
-                left_col_x - field_w // 2,
-                y - field_h // 2,
-                left_col_x - field_w // 2 + 58,
-                y + field_h // 2,
-                r=20,
-                fill="#f3eeee",
-                outline="#d9d1d1",
-                width=2
-            )
-
-            cal_text = canvas.create_text(
-                left_col_x - field_w // 2 + 29,
-                y,
-                text="📅",
-                fill="#111111",
-                font=("Arial", 28, "bold")
-            )
-
-            def open_cal(event):
-                show_calendar_picker()
-
-            for item in (cal_box, cal_text):
-                canvas.tag_bind(item, "<Enter>", lambda e: root.config(cursor="hand2"))
-                canvas.tag_bind(item, "<Leave>", lambda e: root.config(cursor=""))
-                canvas.tag_bind(item, "<Button-1>", open_cal)
-
-        elif key == "request_type":
-            draw_request_type_field(left_col_x, y, field_w, field_h)
-
+        if key == "request_type":
+            draw_request_type_underline(left_col_x, y, field_w)
         else:
-            make_placeholder_entry(left_col_x, y, field_w, field_h, placeholder, key)
+            make_underline_entry(left_col_x, y, field_w, placeholder, key)
 
-    btn_y = int(height * 0.84)
-    btn_w = 190
-    btn_h = 62
+    # Invisible date picker button over date field left edge
+    date_y = start_y + 4 * gap
+    cal_text = canvas.create_text(
+        left_col_x - field_w // 2 + 28,
+        date_y,
+        text="📅",
+        fill="#8f9996",
+        font=("Arial", 18, "bold")
+    )
 
-    btn_center_x = int(width * 0.16)
+    cal_hitbox = canvas.create_rectangle(
+        left_col_x - field_w // 2,
+        date_y - 18,
+        left_col_x - field_w // 2 + 55,
+        date_y + 22,
+        fill="",
+        outline=""
+    )
+
+    def open_cal(event):
+        show_calendar_picker()
+
+    for item in (cal_text, cal_hitbox):
+        canvas.tag_bind(item, "<Enter>", lambda e: root.config(cursor="hand2"))
+        canvas.tag_bind(item, "<Leave>", lambda e: root.config(cursor=""))
+        canvas.tag_bind(item, "<Button-1>", open_cal)
+
+    btn_y = int(height * 0.86)
+    btn_w = 225
+    btn_h = 74
+    btn_center_x = width // 2
 
     preview_btn = rounded_rect(
         btn_center_x - btn_w // 2,
         btn_y - btn_h // 2,
         btn_center_x + btn_w // 2,
         btn_y + btn_h // 2,
-        r=30,
+        r=36,
         fill="#f3eeee",
         outline="#d9d1d1",
         width=2
@@ -1303,129 +1411,6 @@ def show_job_request_form():
         canvas.tag_bind(item, "<Button-1>", btn_click)
 
     draw_back_button(show_written_request)
-
-
-calendar_month = date.today().month
-calendar_year = date.today().year
-
-
-def show_calendar_picker():
-    global current_page
-    current_page = "calendar_picker"
-    clear_screen()
-
-    width = root.winfo_width()
-    height = root.winfo_height()
-
-    canvas.create_rectangle(0, 0, width, height, fill="#173b38", outline="#173b38")
-
-    panel_x1 = int(width * 0.22)
-    panel_x2 = int(width * 0.78)
-    panel_y1 = int(height * 0.12)
-    panel_y2 = int(height * 0.82)
-
-    rounded_rect(
-        panel_x1,
-        panel_y1,
-        panel_x2,
-        panel_y2,
-        r=30,
-        fill="#1d1b24",
-        outline="#4f83ff",
-        width=3
-    )
-
-    month_name = calendar.month_name[calendar_month]
-
-    canvas.create_text(
-        width // 2,
-        panel_y1 + 55,
-        text=f"{month_name} {calendar_year}",
-        fill="#f4f4f4",
-        font=("Arial", 28, "bold")
-    )
-
-    prev_btn = canvas.create_text(panel_x1 + 70, panel_y1 + 55, text="‹", fill="#4f83ff", font=("Arial", 42, "bold"))
-    next_btn = canvas.create_text(panel_x2 - 70, panel_y1 + 55, text="›", fill="#4f83ff", font=("Arial", 42, "bold"))
-
-    def prev_month(event):
-        global calendar_month, calendar_year
-        calendar_month -= 1
-        if calendar_month < 1:
-            calendar_month = 12
-            calendar_year -= 1
-        show_calendar_picker()
-
-    def next_month(event):
-        global calendar_month, calendar_year
-        calendar_month += 1
-        if calendar_month > 12:
-            calendar_month = 1
-            calendar_year += 1
-        show_calendar_picker()
-
-    for item, cmd in [(prev_btn, prev_month), (next_btn, next_month)]:
-        canvas.tag_bind(item, "<Enter>", lambda e: root.config(cursor="hand2"))
-        canvas.tag_bind(item, "<Leave>", lambda e: root.config(cursor=""))
-        canvas.tag_bind(item, "<Button-1>", cmd)
-
-    days_header = ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"]
-    grid_x1 = panel_x1 + 70
-    grid_x2 = panel_x2 - 70
-    col_w = (grid_x2 - grid_x1) // 7
-    start_y = panel_y1 + 120
-    row_h = 58
-
-    for i, d in enumerate(days_header):
-        canvas.create_text(
-            grid_x1 + i * col_w + col_w // 2,
-            start_y,
-            text=d,
-            fill="#d7c28a",
-            font=("Arial", 14, "bold")
-        )
-
-    cal = calendar.Calendar(firstweekday=5)
-    days = list(cal.itermonthdays(calendar_year, calendar_month))
-
-    for index, day in enumerate(days):
-        row = index // 7
-        col = index % 7
-        x = grid_x1 + col * col_w + col_w // 2
-        y = start_y + 45 + row * row_h
-
-        if day == 0:
-            continue
-
-        day_box = rounded_rect(
-            x - 22,
-            y - 20,
-            x + 22,
-            y + 20,
-            r=12,
-            fill="#f3eeee",
-            outline="#f3eeee",
-            width=1
-        )
-
-        day_text = canvas.create_text(
-            x,
-            y,
-            text=str(day),
-            fill="#111111",
-            font=("Arial", 15, "bold")
-        )
-
-        def choose_day(event, selected_day=day):
-            job_form_entries["date"] = f"{selected_day:02d}/{calendar_month:02d}/{calendar_year}"
-            show_job_request_form()
-
-        for item in (day_box, day_text):
-            canvas.tag_bind(item, "<Enter>", lambda e: root.config(cursor="hand2"))
-            canvas.tag_bind(item, "<Leave>", lambda e: root.config(cursor=""))
-            canvas.tag_bind(item, "<Button-1>", choose_day)
-
-    draw_back_button(show_job_request_form)
 
 def scroll_job_form(event):
     global job_form_scroll
