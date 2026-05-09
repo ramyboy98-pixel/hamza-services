@@ -441,7 +441,7 @@ def show_written_request():
             int(height * 0.18),
             text="∧",
             fill="#777777",
-            font=("Arial", 28, "bold")
+            font=("Arial", 23, "bold")
         )
 
     draw_back_button(show_documents)
@@ -911,13 +911,15 @@ def show_job_request_form():
             make_placeholder_entry(left_col_x, y, field_w, field_h, placeholder, key)
 
     btn_y = int(height * 0.84)
-    btn_w = 240
-    btn_h = 70
+    btn_w = 190
+    btn_h = 62
+
+    btn_center_x = int(width * 0.16)
 
     preview_btn = rounded_rect(
-        width // 2 - btn_w // 2,
+        btn_center_x - btn_w // 2,
         btn_y - btn_h // 2,
-        width // 2 + btn_w // 2,
+        btn_center_x + btn_w // 2,
         btn_y + btn_h // 2,
         r=30,
         fill="#f3eeee",
@@ -926,7 +928,7 @@ def show_job_request_form():
     )
 
     preview_text = canvas.create_text(
-        width // 2,
+        btn_center_x,
         btn_y,
         text="معاينة",
         fill="#173b38",
