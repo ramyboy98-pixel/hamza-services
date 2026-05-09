@@ -158,6 +158,7 @@ canvas = tk.Canvas(root, highlightthickness=0, bd=0)
 canvas.pack(fill="both", expand=True)
 
 background_photo = None
+home_card_photos = {}
 current_page = "home"
 animation_running = False
 
@@ -308,9 +309,9 @@ def show_home():
     canvas.create_line(center_x + 120, subtitle_y, center_x + 190, subtitle_y, fill="#bbbbbb")
 
     cards = [
-        ("▣", "وثائق", "إنشاء وتعديل مختلف الوثائق\nالإدارية بسهولة", "documents"),
-        ("◎", "خدمات الكترونية", "الوصول إلى الخدمات الإلكترونية\nوالمنصات الرسمية", "electronic"),
-        ("▤", "ارشيف", "إدارة وأرشفة الملفات والوثائق\nوالوصول إليها بسهولة", "archive"),
+        ("assets/documents.png", "وثائق", "إنشاء وتعديل مختلف الوثائق\nالإدارية بسهولة", "documents"),
+        ("assets/electronic.png", "خدمات الكترونية", "الوصول إلى الخدمات الإلكترونية\nوالمنصات الرسمية", "electronic"),
+        ("assets/archive.png", "ارشيف", "إدارة وأرشفة الملفات والوثائق\nوالوصول إليها بسهولة", "archive"),
     ]
 
     card_w = int(content_w * 0.245)
@@ -321,33 +322,33 @@ def show_home():
     card_y1 = int(height * 0.40)
     card_y2 = card_y1 + card_h
 
-    for i, (icon, title, desc, key) in enumerate(cards):
+    global home_card_photos
+    home_card_photos = {}
+
+    for i, (icon_path, title, desc, key) in enumerate(cards):
         x1 = start_x + i * (card_w + gap)
         x2 = x1 + card_w
 
         card = rounded_home_rect(x1, card_y1, x2, card_y2, r=14, fill="#ffffff", outline="#dddddd", width=1)
-        icon_id = canvas.create_text((x1 + x2) // 2, card_y1 + 80, text=icon, fill="#000000", font=("Arial", 54, "bold"))
-        title_id = canvas.create_text((x1 + x2) // 2, card_y1 + 160, text=title, fill="#000000", font=("Arial", 27, "bold"))
-        desc_id = canvas.create_text((x1 + x2) // 2, card_y1 + 220, text=desc, fill="#666666", font=("Arial", 15, "bold"), justify="center")
 
-        btn_w = int(card_w * 0.62)
-        btn_h = 38
-        btn_y = card_y2 - 60
-        btn_x1 = (x1 + x2) // 2 - btn_w // 2
-        btn_x2 = (x1 + x2) // 2 + btn_w // 2
+        try:
+            icon_img = Image.open(resource_path(icon_path)).convert("RGBA")
+            icon_img = icon_img.resize((95, 95), Image.LANCZOS)
+            icon_photo = ImageTk.PhotoImage(icon_img)
+            home_card_photos[key] = icon_photo
+            icon_id = canvas.create_image((x1 + x2) // 2, card_y1 + 82, image=icon_photo)
+        except Exception:
+            icon_id = canvas.create_text((x1 + x2) // 2, card_y1 + 82, text="■", fill="#000000", font=("Arial", 54, "bold"))
 
-        btn = rounded_home_rect(btn_x1, btn_y - btn_h // 2, btn_x2, btn_y + btn_h // 2, r=6, fill="#000000", outline="#000000", width=1)
-        btn_text = canvas.create_text((btn_x1 + btn_x2) // 2 - 18, btn_y, text="فتح", fill="#ffffff", font=("Arial", 13, "bold"))
-        arrow = canvas.create_text(btn_x2 - 42, btn_y, text="→", fill="#ffffff", font=("Arial", 22, "bold"))
+        title_id = canvas.create_text((x1 + x2) // 2, card_y1 + 165, text=title, fill="#000000", font=("Arial", 27, "bold"))
+        desc_id = canvas.create_text((x1 + x2) // 2, card_y1 + 225, text=desc, fill="#666666", font=("Arial", 15, "bold"), justify="center")
 
-        def enter(event, c=card, b=btn):
-            canvas.itemconfig(c, fill="#fafafa")
-            canvas.itemconfig(b, fill="#111111", outline="#111111")
+        def enter(event, c=card):
+            canvas.itemconfig(c, fill="#fafafa", outline="#cfcfcf")
             root.config(cursor="hand2")
 
-        def leave(event, c=card, b=btn):
-            canvas.itemconfig(c, fill="#ffffff")
-            canvas.itemconfig(b, fill="#000000", outline="#000000")
+        def leave(event, c=card):
+            canvas.itemconfig(c, fill="#ffffff", outline="#dddddd")
             root.config(cursor="")
 
         def click(event, k=key):
@@ -356,7 +357,7 @@ def show_home():
             else:
                 show_section(k)
 
-        for item in (card, icon_id, title_id, desc_id, btn, btn_text, arrow):
+        for item in (card, icon_id, title_id, desc_id):
             canvas.tag_bind(item, "<Enter>", enter)
             canvas.tag_bind(item, "<Leave>", leave)
             canvas.tag_bind(item, "<Button-1>", click)
