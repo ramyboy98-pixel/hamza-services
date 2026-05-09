@@ -512,6 +512,27 @@ def show_written_request_template(name):
 job_form_scroll = 0
 job_form_entries = {}
 
+REQUEST_TYPE_OPTIONS = [
+    "مسابقة على أساس الشهادة",
+    "مسابقة على أساس الاختبار",
+    "طلب استخلاف",
+    "مسابقة الحماية المدنية",
+    "مسابقة الشرطة",
+    "مسابقة الجمارك",
+    "طلب توظيف (عام)",
+    "طلب استقالة",
+    "طلب سكن",
+    "طلب شهادة عمل",
+    "طلب تربص ميداني",
+    "طلب عطلة سنوية",
+    "طلب تحويل إداري",
+    "طلب تسوية وضعية",
+]
+
+request_type_dropdown_open = False
+request_type_scroll = 0
+request_type_selected_index = 6
+
 
 def rounded_rect(x1, y1, x2, y2, r=24, fill="#f3eeee", outline="#f3eeee", width=1):
     points = [
@@ -589,6 +610,207 @@ def make_placeholder_entry(x, y, w, h, placeholder, field_key):
     return entry
 
 
+def open_request_type_dropdown():
+    global request_type_dropdown_open
+    request_type_dropdown_open = True
+    show_job_request_form()
+
+
+def close_request_type_dropdown():
+    global request_type_dropdown_open
+    request_type_dropdown_open = False
+    show_job_request_form()
+
+
+def choose_request_type(value):
+    global request_type_dropdown_open
+    job_form_entries["request_type"] = value
+    request_type_dropdown_open = False
+    show_job_request_form()
+
+
+def scroll_request_type_dropdown(direction):
+    global request_type_scroll
+
+    max_visible = 6
+    max_scroll = max(0, len(REQUEST_TYPE_OPTIONS) - max_visible)
+
+    if direction > 0:
+        request_type_scroll += 1
+    else:
+        request_type_scroll -= 1
+
+    request_type_scroll = max(0, min(request_type_scroll, max_scroll))
+    show_job_request_form()
+
+
+def move_request_type_selection(direction):
+    global request_type_selected_index, request_type_scroll, request_type_dropdown_open
+
+    if not request_type_dropdown_open:
+        return
+
+    request_type_selected_index += direction
+    request_type_selected_index = max(0, min(request_type_selected_index, len(REQUEST_TYPE_OPTIONS) - 1))
+
+    max_visible = 6
+    if request_type_selected_index < request_type_scroll:
+        request_type_scroll = request_type_selected_index
+    elif request_type_selected_index >= request_type_scroll + max_visible:
+        request_type_scroll = request_type_selected_index - max_visible + 1
+
+    show_job_request_form()
+
+
+def confirm_request_type_selection():
+    global request_type_dropdown_open
+
+    if not request_type_dropdown_open:
+        return
+
+    choose_request_type(REQUEST_TYPE_OPTIONS[request_type_selected_index])
+
+
+def draw_request_type_field(x, y, w, h):
+    selected_value = job_form_entries.get("request_type", "")
+
+    rounded_rect(
+        x - w // 2,
+        y - h // 2,
+        x + w // 2,
+        y + h // 2,
+        r=28,
+        fill="#f3eeee",
+        outline="#d9d1d1",
+        width=2
+    )
+
+    arrow_x = x - w // 2 + 45
+    arrow = canvas.create_text(
+        arrow_x,
+        y,
+        text="▼",
+        fill="#555555",
+        font=("Arial", 26, "bold")
+    )
+
+    text = canvas.create_text(
+        x + w // 2 - 48,
+        y,
+        text=selected_value if selected_value else "نوع الطلب",
+        fill="#173b38" if selected_value else "#777777",
+        font=("Arial", 21, "bold"),
+        anchor="e"
+    )
+
+    hitbox = canvas.create_rectangle(
+        x - w // 2,
+        y - h // 2,
+        x + w // 2,
+        y + h // 2,
+        fill="",
+        outline=""
+    )
+
+    def enter(event):
+        root.config(cursor="hand2")
+
+    def leave(event):
+        root.config(cursor="")
+
+    def click(event):
+        open_request_type_dropdown()
+
+    for item in (arrow, text, hitbox):
+        canvas.tag_bind(item, "<Enter>", enter)
+        canvas.tag_bind(item, "<Leave>", leave)
+        canvas.tag_bind(item, "<Button-1>", click)
+
+    if request_type_dropdown_open:
+        draw_request_type_dropdown(x, y + h // 2 + 8, w)
+
+
+def draw_request_type_dropdown(x, y, w):
+    global request_type_selected_index
+
+    max_visible = 6
+    row_h = 44
+    visible = REQUEST_TYPE_OPTIONS[request_type_scroll:request_type_scroll + max_visible]
+
+    box_x1 = x - w // 2
+    box_x2 = x + w // 2
+    box_y1 = y
+    box_y2 = y + len(visible) * row_h + 14
+
+    rounded_rect(
+        box_x1,
+        box_y1,
+        box_x2,
+        box_y2,
+        r=22,
+        fill="#f3eeee",
+        outline="#d9d1d1",
+        width=2
+    )
+
+    for index, value in enumerate(visible):
+        real_index = request_type_scroll + index
+        item_y = box_y1 + 18 + index * row_h + row_h // 2
+
+        is_selected = real_index == request_type_selected_index
+        if is_selected:
+            selected_bg = rounded_rect(
+                box_x1 + 12,
+                item_y - 18,
+                box_x2 - 12,
+                item_y + 18,
+                r=16,
+                fill="#d7c28a",
+                outline="#d7c28a",
+                width=1
+            )
+
+        item_text = canvas.create_text(
+            box_x2 - 35,
+            item_y,
+            text=value,
+            fill="#173b38",
+            font=("Arial", 17, "bold"),
+            anchor="e"
+        )
+
+        hitbox = canvas.create_rectangle(
+            box_x1 + 10,
+            item_y - 20,
+            box_x2 - 10,
+            item_y + 20,
+            fill="",
+            outline=""
+        )
+
+        def enter(event, idx=real_index):
+            global request_type_selected_index
+            request_type_selected_index = idx
+            root.config(cursor="hand2")
+
+        def leave(event):
+            root.config(cursor="")
+
+        def click(event, chosen=value):
+            choose_request_type(chosen)
+
+        for item in (item_text, hitbox):
+            canvas.tag_bind(item, "<Enter>", enter)
+            canvas.tag_bind(item, "<Leave>", leave)
+            canvas.tag_bind(item, "<Button-1>", click)
+
+    if request_type_scroll > 0:
+        canvas.create_text(x, box_y1 + 10, text="▲", fill="#777777", font=("Arial", 12, "bold"))
+
+    if request_type_scroll + max_visible < len(REQUEST_TYPE_OPTIONS):
+        canvas.create_text(x, box_y2 - 9, text="▼", fill="#777777", font=("Arial", 12, "bold"))
+
+
 def show_job_request_form():
     global current_page, job_form_entries
     current_page = "job_request_form"
@@ -640,6 +862,7 @@ def show_job_request_form():
         ("الشهادة / المؤهلات", "degree"),
         ("التخصص", "specialty"),
         ("تاريخ الطلب", "date"),
+        ("نوع الطلب", "request_type"),
     ]
 
     start_y = int(height * 0.16)
@@ -680,6 +903,10 @@ def show_job_request_form():
                 canvas.tag_bind(item, "<Enter>", lambda e: root.config(cursor="hand2"))
                 canvas.tag_bind(item, "<Leave>", lambda e: root.config(cursor=""))
                 canvas.tag_bind(item, "<Button-1>", open_cal)
+
+        elif key == "request_type":
+            draw_request_type_field(left_col_x, y, field_w, field_h)
+
         else:
             make_placeholder_entry(left_col_x, y, field_w, field_h, placeholder, key)
 
@@ -904,7 +1131,8 @@ def show_job_request_preview():
         f"إلى: {job_form_entries.get('recipient', '')}\n"
         f"المنصب المطلوب: {job_form_entries.get('position', '')}\n"
         f"الشهادة / المستوى: {job_form_entries.get('degree', '')}\n"
-        f"التخصص: {job_form_entries.get('specialty', '')}"
+        f"التخصص: {job_form_entries.get('specialty', '')}\n"
+        f"نوع الطلب: {job_form_entries.get('request_type', '')}"
     )
 
     canvas.create_text(
@@ -1007,8 +1235,27 @@ def on_resize(event):
             show_section(current_page)
 
 
+
+def on_request_type_key(event):
+    if current_page != "job_request_form" or not request_type_dropdown_open:
+        return
+
+    if event.keysym == "Down":
+        move_request_type_selection(1)
+    elif event.keysym == "Up":
+        move_request_type_selection(-1)
+    elif event.keysym == "Return":
+        confirm_request_type_selection()
+    elif event.keysym == "Escape":
+        close_request_type_dropdown()
+
+
 root.bind("<Configure>", on_resize)
-root.bind("<MouseWheel>", lambda event: scroll_job_form(event) if current_page == "job_request_form" else scroll_written_request(event))
+root.bind("<Up>", on_request_type_key)
+root.bind("<Down>", on_request_type_key)
+root.bind("<Return>", on_request_type_key)
+root.bind("<Escape>", on_request_type_key)
+root.bind("<MouseWheel>", lambda event: scroll_request_type_dropdown(1 if event.delta < 0 else -1) if (current_page == "job_request_form" and request_type_dropdown_open) else (scroll_job_form(event) if current_page == "job_request_form" else scroll_written_request(event)))
 
 show_home()
 root.mainloop()
