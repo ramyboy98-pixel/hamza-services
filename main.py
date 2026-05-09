@@ -1425,8 +1425,11 @@ written_request_items = [
     "طلب عداد غاز","طلب تصحيح عقد زواج","طلب تصحيح عقد ميلاد","طلب إعانة ريفية"
 ]
 
+written_request_menu_scroll = 0
+written_request_search_query = ""
+
 def show_written_request_menu():
-    global current_page
+    global current_page, written_request_menu_scroll, written_request_search_query
     current_page = "written_request_menu"
     clear_screen()
 
@@ -1436,28 +1439,27 @@ def show_written_request_menu():
     canvas.create_rectangle(0, 0, width, height, fill="#efefef", outline="#efefef")
     draw_home_sidebar("home")
 
-    sidebar_w = 120
-    center_x = sidebar_w + (width - sidebar_w) // 2
+    # Search field - longer
+    search_x = width - 290
+    search_w = 260
+    canvas.create_line(search_x - search_w, 104, search_x + 10, 104, fill="#bdbdbd", width=2)
 
-    try:
-        img = Image.open(resource_path("assets/written_request.png")).convert("RGBA")
-        img = img.resize((85,85), Image.LANCZOS)
-        photo = ImageTk.PhotoImage(img)
-        canvas.req_photo = photo
-        canvas.create_image(center_x + 120, 72, image=photo)
-    except:
-        pass
+    search_entry = tk.Entry(
+        root,
+        bd=0,
+        bg="#efefef",
+        fg="#111111",
+        font=("Arial", 18, "bold"),
+        justify="right",
+        insertbackground="#111111"
+    )
 
-    canvas.create_text(center_x, 72, text="طلب خطي", fill="#000000", font=("Arial", 44, "bold"))
-
-    search_x = width - 260
-    canvas.create_line(search_x - 165, 104, search_x + 10, 104, fill="#bdbdbd", width=2)
-
-    search_entry = tk.Entry(root, bd=0, bg="#efefef", fg="#111111",
-        font=("Arial", 18, "bold"), justify="right", insertbackground="#111111")
-
-    search_entry.insert(0, "بحث")
-    search_entry.config(fg="#9b9b9b")
+    if written_request_search_query:
+        search_entry.insert(0, written_request_search_query)
+        search_entry.config(fg="#111111")
+    else:
+        search_entry.insert(0, "بحث")
+        search_entry.config(fg="#9b9b9b")
 
     def s_in(e):
         if search_entry.get() == "بحث":
@@ -1465,20 +1467,45 @@ def show_written_request_menu():
             search_entry.config(fg="#111111")
 
     def s_out(e):
+        global written_request_search_query
         if not search_entry.get():
+            written_request_search_query = ""
             search_entry.insert(0, "بحث")
             search_entry.config(fg="#9b9b9b")
 
+    def do_search(e=None):
+        global written_request_search_query, written_request_menu_scroll
+        text = search_entry.get().strip()
+        if text == "بحث":
+            text = ""
+        written_request_search_query = text
+        written_request_menu_scroll = 0
+        show_written_request_menu()
+
     search_entry.bind("<FocusIn>", s_in)
     search_entry.bind("<FocusOut>", s_out)
+    search_entry.bind("<KeyRelease>", do_search)
 
-    canvas.create_window(search_x - 70, 82, window=search_entry, width=155, height=30)
+    canvas.create_window(search_x - 118, 82, window=search_entry, width=search_w - 42, height=30)
     canvas.create_text(search_x + 5, 82, text="⌕", fill="#a5a5a5", font=("Arial", 28))
 
+    # Filter cards by search
+    query = written_request_search_query.strip().lower()
+    if query:
+        filtered_items = [item for item in written_request_items if query in item.lower()]
+    else:
+        filtered_items = list(written_request_items)
+
+    # Pagination / scroll: 24 visible cards (3 columns x 8 rows)
+    visible_capacity = 24
+    max_scroll = max(0, len(filtered_items) - visible_capacity)
+    written_request_menu_scroll = max(0, min(written_request_menu_scroll, max_scroll))
+    visible_items = filtered_items[written_request_menu_scroll:written_request_menu_scroll + visible_capacity]
+
     columns = [
-        written_request_items[16:],
-        written_request_items[8:16],
-        written_request_items[:8],
+        visible_items[16:24],
+        visible_items[8:16],
+        visible_items[0:8],
     ]
 
     col_x = [315, 755, 1195]
@@ -1527,6 +1554,7 @@ def show_written_request_menu():
                 font=("Arial", size, "bold")
             )
 
+            subtxt = None
             if sub:
                 subtxt = canvas.create_text(
                     x,
@@ -1548,10 +1576,54 @@ def show_written_request_menu():
                 job_form_entries["request_type"] = t
                 show_job_request_form()
 
-            for it in (card, txt):
+            bind_items = [card, txt]
+            if subtxt:
+                bind_items.append(subtxt)
+
+            for it in bind_items:
                 canvas.tag_bind(it, "<Enter>", enter)
                 canvas.tag_bind(it, "<Leave>", leave)
                 canvas.tag_bind(it, "<Button-1>", click)
+
+    if not visible_items:
+        canvas.create_text(
+            760,
+            395,
+            text="لا توجد نتائج",
+            fill="#777777",
+            font=("Arial", 28, "bold")
+        )
+
+    # Scroll indicators
+    if written_request_menu_scroll > 0:
+        canvas.create_text(width - 55, 145, text="▲", fill="#777777", font=("Arial", 20, "bold"))
+
+    if written_request_menu_scroll < max_scroll:
+        canvas.create_text(width - 55, height - 45, text="▼", fill="#777777", font=("Arial", 20, "bold"))
+
+
+def scroll_written_request_menu(event):
+    global written_request_menu_scroll
+
+    if current_page != "written_request_menu":
+        return
+
+    query = written_request_search_query.strip().lower()
+    if query:
+        filtered_items = [item for item in written_request_items if query in item.lower()]
+    else:
+        filtered_items = list(written_request_items)
+
+    max_scroll = max(0, len(filtered_items) - 24)
+
+    if event.delta < 0:
+        written_request_menu_scroll += 3
+    else:
+        written_request_menu_scroll -= 3
+
+    written_request_menu_scroll = max(0, min(written_request_menu_scroll, max_scroll))
+    show_written_request_menu()
+
 
 def make_light_underline_entry(x, y, w, placeholder, field_key):
     value = job_form_entries.get(field_key, "")
@@ -1960,7 +2032,7 @@ root.bind("<Up>", on_request_type_key)
 root.bind("<Down>", on_request_type_key)
 root.bind("<Return>", on_request_type_key)
 root.bind("<Escape>", on_request_type_key)
-root.bind("<MouseWheel>", lambda event: scroll_request_type_dropdown(1 if event.delta < 0 else -1) if (current_page == "job_request_form" and request_type_dropdown_open) else (scroll_job_form(event) if current_page == "job_request_form" else scroll_written_request(event)))
+root.bind("<MouseWheel>", lambda event: scroll_written_request_menu(event) if current_page == "written_request_menu" else (scroll_request_type_dropdown(1 if event.delta < 0 else -1) if (current_page == "job_request_form" and request_type_dropdown_open) else (scroll_job_form(event) if current_page == "job_request_form" else scroll_written_request(event))))
 
 show_home()
 root.mainloop()
