@@ -154,6 +154,11 @@ def apply_client_to_form(client):
 
 
 root = tk.Tk()
+
+try:
+    root.state("zoomed")
+except Exception:
+    root.geometry("1400x820")
 root.title("IDARA DZ")
 root.geometry("1600x900")
 root.minsize(1000, 600)
@@ -4663,6 +4668,10 @@ def on_resize(event):
             show_card_builder(current_dynamic_card_id)
         elif current_page == "dynamic_form":
             show_dynamic_form(current_dynamic_card_id)
+        elif current_page == "internal_template_editor":
+            show_internal_template_editor(current_dynamic_card_id)
+        elif current_page == "dynamic_calendar":
+            show_dynamic_calendar(current_dynamic_card_id, dynamic_date_field_name)
         elif current_page == "settings":
             show_settings_main()
         elif current_page == "settings":
@@ -4739,6 +4748,11 @@ def on_request_type_key(event):
 
 
 
+
+
+dynamic_date_field_name = None
+dynamic_date_month = date.today().month
+dynamic_date_year = date.today().year
 
 # ============================================================
 # CLEAN REQUEST BUILDER - طلب خطي بدون بطاقات مبرمجة
@@ -5142,10 +5156,10 @@ def show_card_builder(card_id=None):
 
     canvas.create_text(
         center_x,
-        52,
+        38,
         text="اضافة طلب خطي" if not editing else "تعديل طلب خطي",
         fill="#000000",
-        font=("Arial", 34, "bold")
+        font=("Arial", 31, "bold")
     )
 
     form_w = int(content_w * 0.58)
@@ -5155,16 +5169,16 @@ def show_card_builder(card_id=None):
     # اسم الطلب
     canvas.create_text(
         label_x,
-        122,
+        96,
         text="اسم الطلب",
         fill="#000000",
-        font=("Arial", 23, "bold"),
+        font=("Arial", 21, "bold"),
         anchor="e"
     )
 
     title_entry = tk.Entry(
         root,
-        font=("Arial", 18, "bold"),
+        font=("Arial", 17, "bold"),
         justify="right",
         bd=1,
         relief="solid",
@@ -5173,21 +5187,21 @@ def show_card_builder(card_id=None):
         insertbackground="#000000"
     )
     title_entry.insert(0, old_title)
-    canvas.create_window(form_x, 170, window=title_entry, width=form_w, height=46)
+    canvas.create_window(form_x, 137, window=title_entry, width=form_w, height=42)
 
     # خانات الاستمارة
     canvas.create_text(
         label_x,
-        230,
+        188,
         text="خانات الاستمارة",
         fill="#000000",
-        font=("Arial", 23, "bold"),
+        font=("Arial", 21, "bold"),
         anchor="e"
     )
 
     fields_text = tk.Text(
         root,
-        font=("Arial", 17, "bold"),
+        font=("Arial", 16, "bold"),
         bd=1,
         relief="solid",
         wrap="word",
@@ -5200,36 +5214,38 @@ def show_card_builder(card_id=None):
     fields_text.tag_add("right", "1.0", "end")
     fields_text.bind("<KeyRelease>", lambda e: fields_text.tag_add("right", "1.0", "end"))
 
-    # حجم الصندوق يتقلص حسب الشاشة ليترك مكانا للأزرار
-    text_top = 270
-    buttons_y1 = height - 95
-    buttons_y2 = height - 50
-    text_h = max(190, buttons_y1 - text_top - 35)
+    # نرفع الصندوق للأعلى ونترك الأزرار ظاهرة
+    text_top = 220
+    buttons_y1 = min(height - 95, 610)
+    buttons_y2 = buttons_y1 + 45
+    text_h = max(260, buttons_y1 - text_top - 35)
 
     canvas.create_window(form_x, text_top + text_h // 2, window=fields_text, width=form_w, height=text_h)
 
     template_label = canvas.create_text(
         form_x,
-        buttons_y1 - 25,
+        buttons_y1 - 22,
         text=os.path.basename(builder_template_path) if builder_template_path else "",
         fill="#555555",
         font=("Arial", 12, "bold")
     )
 
-    # الأزرار ثابتة فوق أسفل الشاشة دائما
+    # الأزرار
+    upload_color = "#0a8f2a" if builder_template_path else "#000000"
+
     upload_btn = rounded_home_rect(
         form_x - 280,
         buttons_y1,
         form_x - 95,
         buttons_y2,
         r=0,
-        fill="#000000",
-        outline="#000000"
+        fill=upload_color,
+        outline=upload_color
     )
     upload_txt = canvas.create_text(
         form_x - 187,
         (buttons_y1 + buttons_y2) // 2,
-        text="رفع نموذج",
+        text="✓ رفع نموذج" if builder_template_path else "رفع نموذج",
         fill="#ffffff",
         font=("Arial", 15, "bold")
     )
@@ -5277,38 +5293,14 @@ def show_card_builder(card_id=None):
         if path:
             builder_template_path = path
             canvas.itemconfig(template_label, text=os.path.basename(path), fill="#000000")
+            canvas.itemconfig(upload_btn, fill="#0a8f2a", outline="#0a8f2a")
+            canvas.itemconfig(upload_txt, text="✓ رفع نموذج")
 
     def create_template(event):
-        global builder_template_path
-
-        title = title_entry.get().strip() or "نموذج_جديد"
-        safe_title = title.replace("/", "-").replace("\\", "-").replace(":", "-").replace(" ", "_")
-        os.makedirs(TEMPLATES_DIR, exist_ok=True)
-
-        new_path = os.path.join(TEMPLATES_DIR, f"{safe_title}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.docx")
-
-        doc = Document()
-        p = doc.add_paragraph()
-        p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-        run = p.add_run("اكتب نموذج الطلب هنا، واستعمل علامات الخانات مثل: {{الاسم}} {{اللقب}} {{تاريخ الطلب}}")
-        try:
-            set_job1_run_font(run, 14, False)
-        except Exception:
-            pass
-        doc.save(new_path)
-
-        builder_template_path = new_path
-        canvas.itemconfig(template_label, text=os.path.basename(new_path), fill="#000000")
-
-        try:
-            if sys.platform.startswith("win"):
-                os.startfile(new_path)
-            elif sys.platform == "darwin":
-                subprocess.Popen(["open", new_path])
-            else:
-                subprocess.Popen(["xdg-open", new_path])
-        except Exception:
-            pass
+        title = title_entry.get().strip()
+        raw_fields = fields_text.get("1.0", "end").strip()
+        fields = [line.strip() for line in raw_fields.splitlines() if line.strip()]
+        show_internal_template_editor(card_id, title, fields)
 
     def save_card(event):
         title = title_entry.get().strip()
@@ -5320,11 +5312,19 @@ def show_card_builder(card_id=None):
             show_written_request_menu()
 
     def enter(event, b):
-        canvas.itemconfig(b, fill="#1a1a1a")
+        # زر رفع النموذج يبقى أخضر إذا كان النموذج مرفوع
+        current_fill = canvas.itemcget(b, "fill")
+        if current_fill == "#0a8f2a":
+            canvas.itemconfig(b, fill="#087c24")
+        else:
+            canvas.itemconfig(b, fill="#1a1a1a")
         root.config(cursor="hand2")
 
     def leave(event, b):
-        canvas.itemconfig(b, fill="#000000")
+        if b == upload_btn and builder_template_path:
+            canvas.itemconfig(b, fill="#0a8f2a")
+        else:
+            canvas.itemconfig(b, fill="#000000")
         root.config(cursor="")
 
     for btn, txt, cmd in [
@@ -5339,6 +5339,87 @@ def show_card_builder(card_id=None):
 
 
 
+
+def show_internal_template_editor(card_id=None, title="", fields=None):
+    global current_page, builder_template_path
+    current_page = "internal_template_editor"
+    clear_screen()
+
+    if fields is None:
+        fields = []
+
+    width = root.winfo_width()
+    height = root.winfo_height()
+
+    if width < 1200:
+        width = 1200
+    if height < 720:
+        height = 720
+
+    canvas.create_rectangle(0, 0, width, height, fill="#ffffff", outline="#ffffff")
+    draw_home_sidebar("home")
+
+    sidebar_w = 120
+    content_w = width - sidebar_w
+    center_x = sidebar_w + content_w // 2
+
+    canvas.create_text(center_x, 45, text="إنشاء نموذج", fill="#000000", font=("Arial", 32, "bold"))
+
+    editor = tk.Text(
+        root,
+        font=("Arial", 15),
+        bd=1,
+        relief="solid",
+        wrap="word",
+        bg="#ffffff",
+        fg="#000000",
+        insertbackground="#000000"
+    )
+    editor.tag_configure("right", justify="right")
+
+    starter = "اكتب نص النموذج هنا واستعمل الخانات بهذا الشكل:\n\n"
+    if fields:
+        starter += " ".join(["{{" + f + "}}" for f in fields])
+    else:
+        starter += "{{الاسم}} {{اللقب}} {{تاريخ الطلب}}"
+    editor.insert("1.0", starter)
+    editor.tag_add("right", "1.0", "end")
+    editor.bind("<KeyRelease>", lambda e: editor.tag_add("right", "1.0", "end"))
+
+    canvas.create_window(center_x, height // 2, window=editor, width=int(content_w * 0.72), height=int(height * 0.62))
+
+    save_btn = rounded_home_rect(center_x - 90, height - 80, center_x + 90, height - 35, r=0, fill="#000000", outline="#000000")
+    save_txt = canvas.create_text(center_x, height - 57, text="حفظ النموذج", fill="#ffffff", font=("Arial", 15, "bold"))
+
+    def save_template(event):
+        global builder_template_path
+
+        safe_title = (title or "نموذج_جديد").replace("/", "-").replace("\\", "-").replace(":", "-").replace(" ", "_")
+        os.makedirs(TEMPLATES_DIR, exist_ok=True)
+        new_path = os.path.join(TEMPLATES_DIR, f"{safe_title}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.docx")
+
+        text = editor.get("1.0", "end").strip()
+
+        doc = Document()
+        for line in text.splitlines():
+            p = doc.add_paragraph()
+            p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+            run = p.add_run(line)
+            try:
+                set_job1_run_font(run, 14, False)
+            except Exception:
+                pass
+
+        doc.save(new_path)
+        builder_template_path = new_path
+        show_card_builder(card_id)
+
+    for it in (save_btn, save_txt):
+        canvas.tag_bind(it, "<Enter>", lambda e: root.config(cursor="hand2"))
+        canvas.tag_bind(it, "<Leave>", lambda e: root.config(cursor=""))
+        canvas.tag_bind(it, "<Button-1>", save_template)
+
+
 def show_dynamic_form(card_id):
     global current_page, current_dynamic_card_id, dynamic_values
     current_page = "dynamic_form"
@@ -5346,7 +5427,8 @@ def show_dynamic_form(card_id):
     dynamic_values = rb_draft(card_id)
 
     rows = rb_rows("SELECT * FROM cards WHERE id=?", (card_id,))
-    if not rows: return
+    if not rows:
+        return
     card = rows[0]
     fields = rb_fields(card_id)
 
@@ -5370,7 +5452,13 @@ def show_dynamic_form(card_id):
         x = right_x if idx % 2 == 0 else left_x
         y = start_y + (idx//2)*gap
 
+        is_date = "تاريخ" in name or "ميلاد" in name
+
         canvas.create_line(x-field_w//2, y+18, x+field_w//2, y+18, fill="#b8b8b8", width=2)
+
+        entry_width = field_w - 45 if is_date else field_w
+        entry_x = x + 20 if is_date else x
+
         entry = tk.Entry(root, font=("Arial", 16, "bold"), justify="right", bd=0, bg="#ffffff", fg="#111111", insertbackground="#111111")
         val = dynamic_values.get(name, "")
         entry.insert(0, val if val else name)
@@ -5390,13 +5478,26 @@ def show_dynamic_form(card_id):
 
         def key(e, en=entry, ph=name, nm=name):
             v = en.get()
-            if v == ph: v = ""
+            if v == ph:
+                v = ""
             rb_save_draft(card_id, nm, v)
 
         entry.bind("<FocusIn>", fin)
         entry.bind("<FocusOut>", fout)
         entry.bind("<KeyRelease>", key)
-        canvas.create_window(x, y, window=entry, width=field_w, height=34)
+        canvas.create_window(entry_x, y, window=entry, width=entry_width, height=34)
+
+        if is_date:
+            icon = canvas.create_text(x - field_w//2 + 22, y, text="📅", fill="#000000", font=("Arial", 20, "bold"))
+            hit = canvas.create_rectangle(x - field_w//2, y - 20, x - field_w//2 + 45, y + 22, fill="", outline="")
+
+            def open_cal(e, nm=name):
+                show_dynamic_calendar(card_id, nm)
+
+            for it in (icon, hit):
+                canvas.tag_bind(it, "<Enter>", lambda e: root.config(cursor="hand2"))
+                canvas.tag_bind(it, "<Leave>", lambda e: root.config(cursor=""))
+                canvas.tag_bind(it, "<Button-1>", open_cal)
 
     preview = canvas.create_text(int(width*0.90), int(height*0.88), text="معاينة", fill="#55bfff", font=("Arial", 27, "bold"))
     canvas.tag_bind(preview, "<Enter>", lambda e: (canvas.itemconfig(preview, fill="#1d9fee"), root.config(cursor="hand2")))
@@ -5404,12 +5505,86 @@ def show_dynamic_form(card_id):
     canvas.tag_bind(preview, "<Button-1>", lambda e: rb_open_docx(card_id))
 
 
-root.bind("<Configure>", on_resize)
-root.bind("<Up>", on_request_type_key)
-root.bind("<Down>", on_request_type_key)
-root.bind("<Return>", on_request_type_key)
-root.bind("<Escape>", on_request_type_key)
-root.bind("<MouseWheel>", lambda event: scroll_written_request_menu(event) if current_page == "written_request_menu" else None)
+def show_dynamic_calendar(card_id, field_name):
+    global current_page, current_dynamic_card_id, dynamic_date_field_name
+    global dynamic_date_month, dynamic_date_year
 
-show_home()
-root.mainloop()
+    current_page = "dynamic_calendar"
+    current_dynamic_card_id = card_id
+    dynamic_date_field_name = field_name
+
+    clear_screen()
+
+    width = root.winfo_width()
+    height = root.winfo_height()
+
+    canvas.create_rectangle(0, 0, width, height, fill="#ffffff", outline="#ffffff")
+    draw_home_sidebar("home")
+
+    panel_x1 = int(width * 0.24)
+    panel_x2 = int(width * 0.82)
+    panel_y1 = int(height * 0.12)
+    panel_y2 = int(height * 0.82)
+
+    rounded_home_rect(panel_x1, panel_y1, panel_x2, panel_y2, r=18, fill="#ffffff", outline="#dddddd", width=2)
+
+    canvas.create_text(width // 2, panel_y1 + 55, text=f"{calendar.month_name[dynamic_date_month]} {dynamic_date_year}", fill="#000000", font=("Arial", 28, "bold"))
+
+    prev_btn = canvas.create_text(panel_x1 + 70, panel_y1 + 55, text="‹", fill="#000000", font=("Arial", 42, "bold"))
+    next_btn = canvas.create_text(panel_x2 - 70, panel_y1 + 55, text="›", fill="#000000", font=("Arial", 42, "bold"))
+
+    def prev_month(event):
+        global dynamic_date_month, dynamic_date_year
+        dynamic_date_month -= 1
+        if dynamic_date_month < 1:
+            dynamic_date_month = 12
+            dynamic_date_year -= 1
+        show_dynamic_calendar(card_id, field_name)
+
+    def next_month(event):
+        global dynamic_date_month, dynamic_date_year
+        dynamic_date_month += 1
+        if dynamic_date_month > 12:
+            dynamic_date_month = 1
+            dynamic_date_year += 1
+        show_dynamic_calendar(card_id, field_name)
+
+    for item, cmd in [(prev_btn, prev_month), (next_btn, next_month)]:
+        canvas.tag_bind(item, "<Enter>", lambda e: root.config(cursor="hand2"))
+        canvas.tag_bind(item, "<Leave>", lambda e: root.config(cursor=""))
+        canvas.tag_bind(item, "<Button-1>", cmd)
+
+    days_header = ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"]
+    grid_x1 = panel_x1 + 80
+    grid_x2 = panel_x2 - 80
+    col_w = (grid_x2 - grid_x1) // 7
+    start_y = panel_y1 + 120
+    row_h = 58
+
+    for i, d in enumerate(days_header):
+        canvas.create_text(grid_x1 + i * col_w + col_w // 2, start_y, text=d, fill="#555555", font=("Arial", 14, "bold"))
+
+    cal = calendar.Calendar(firstweekday=5)
+    days = list(cal.itermonthdays(dynamic_date_year, dynamic_date_month))
+
+    for index, day in enumerate(days):
+        row = index // 7
+        col = index % 7
+        x = grid_x1 + col * col_w + col_w // 2
+        y = start_y + 45 + row * row_h
+
+        if day == 0:
+            continue
+
+        day_box = rounded_home_rect(x - 22, y - 20, x + 22, y + 20, r=10, fill="#ffffff", outline="#dddddd", width=1)
+        day_text = canvas.create_text(x, y, text=str(day), fill="#000000", font=("Arial", 15, "bold"))
+
+        def choose_day(event, selected_day=day):
+            rb_save_draft(card_id, field_name, f"{selected_day:02d}/{dynamic_date_month:02d}/{dynamic_date_year}")
+            show_dynamic_form(card_id)
+
+        for item in (day_box, day_text):
+            canvas.tag_bind(item, "<Enter>", lambda e: root.config(cursor="hand2"))
+            canvas.tag_bind(item, "<Leave>", lambda e: root.config(cursor=""))
+            canvas.tag_bind(item, "<Button-1>", choose_day)
+
