@@ -155,7 +155,7 @@ def apply_client_to_form(client):
 
 root = tk.Tk()
 root.title("IDARA DZ")
-root.geometry("1280x720")
+root.geometry("1600x900")
 root.minsize(1000, 600)
 root.configure(bg="black")
 
@@ -5116,6 +5116,11 @@ def show_card_builder(card_id=None):
     width = root.winfo_width()
     height = root.winfo_height()
 
+    if width < 1200:
+        width = 1200
+    if height < 720:
+        height = 720
+
     canvas.create_rectangle(0, 0, width, height, fill="#ffffff", outline="#ffffff")
     draw_home_sidebar("home")
 
@@ -5137,22 +5142,23 @@ def show_card_builder(card_id=None):
 
     canvas.create_text(
         center_x,
-        62,
+        52,
         text="اضافة طلب خطي" if not editing else "تعديل طلب خطي",
         fill="#000000",
-        font=("Arial", 36, "bold")
+        font=("Arial", 34, "bold")
     )
 
-    form_w = int(content_w * 0.56)
+    form_w = int(content_w * 0.58)
     form_x = center_x
     label_x = form_x + form_w // 2
 
+    # اسم الطلب
     canvas.create_text(
         label_x,
-        145,
+        122,
         text="اسم الطلب",
         fill="#000000",
-        font=("Arial", 24, "bold"),
+        font=("Arial", 23, "bold"),
         anchor="e"
     )
 
@@ -5167,14 +5173,15 @@ def show_card_builder(card_id=None):
         insertbackground="#000000"
     )
     title_entry.insert(0, old_title)
-    canvas.create_window(form_x, 205, window=title_entry, width=form_w, height=48)
+    canvas.create_window(form_x, 170, window=title_entry, width=form_w, height=46)
 
+    # خانات الاستمارة
     canvas.create_text(
         label_x,
-        285,
+        230,
         text="خانات الاستمارة",
         fill="#000000",
-        font=("Arial", 24, "bold"),
+        font=("Arial", 23, "bold"),
         anchor="e"
     )
 
@@ -5192,40 +5199,92 @@ def show_card_builder(card_id=None):
     fields_text.insert("1.0", old_fields)
     fields_text.tag_add("right", "1.0", "end")
     fields_text.bind("<KeyRelease>", lambda e: fields_text.tag_add("right", "1.0", "end"))
-    canvas.create_window(form_x, 455, window=fields_text, width=form_w, height=250)
+
+    # حجم الصندوق يتقلص حسب الشاشة ليترك مكانا للأزرار
+    text_top = 270
+    buttons_y1 = height - 95
+    buttons_y2 = height - 50
+    text_h = max(190, buttons_y1 - text_top - 35)
+
+    canvas.create_window(form_x, text_top + text_h // 2, window=fields_text, width=form_w, height=text_h)
 
     template_label = canvas.create_text(
         form_x,
-        610,
+        buttons_y1 - 25,
         text=os.path.basename(builder_template_path) if builder_template_path else "",
         fill="#555555",
         font=("Arial", 12, "bold")
     )
 
-    btn_y1 = 655
-    btn_y2 = 700
+    # الأزرار ثابتة فوق أسفل الشاشة دائما
+    upload_btn = rounded_home_rect(
+        form_x - 280,
+        buttons_y1,
+        form_x - 95,
+        buttons_y2,
+        r=0,
+        fill="#000000",
+        outline="#000000"
+    )
+    upload_txt = canvas.create_text(
+        form_x - 187,
+        (buttons_y1 + buttons_y2) // 2,
+        text="رفع نموذج",
+        fill="#ffffff",
+        font=("Arial", 15, "bold")
+    )
 
-    upload_btn = rounded_home_rect(form_x - 275, btn_y1, form_x - 95, btn_y2, r=0, fill="#000000", outline="#000000")
-    upload_txt = canvas.create_text(form_x - 185, (btn_y1 + btn_y2) // 2, text="رفع نموذج", fill="#ffffff", font=("Arial", 15, "bold"))
+    create_btn = rounded_home_rect(
+        form_x - 75,
+        buttons_y1,
+        form_x + 110,
+        buttons_y2,
+        r=0,
+        fill="#000000",
+        outline="#000000"
+    )
+    create_txt = canvas.create_text(
+        form_x + 17,
+        (buttons_y1 + buttons_y2) // 2,
+        text="إنشاء نموذج",
+        fill="#ffffff",
+        font=("Arial", 15, "bold")
+    )
 
-    create_btn = rounded_home_rect(form_x - 75, btn_y1, form_x + 105, btn_y2, r=0, fill="#000000", outline="#000000")
-    create_txt = canvas.create_text(form_x + 15, (btn_y1 + btn_y2) // 2, text="إنشاء نموذج", fill="#ffffff", font=("Arial", 15, "bold"))
-
-    save_btn = rounded_home_rect(form_x + 315, btn_y1, form_x + 455, btn_y2, r=0, fill="#000000", outline="#000000")
-    save_txt = canvas.create_text(form_x + 385, (btn_y1 + btn_y2) // 2, text="حفظ", fill="#ffffff", font=("Arial", 15, "bold"))
+    save_btn = rounded_home_rect(
+        form_x + 315,
+        buttons_y1,
+        form_x + 455,
+        buttons_y2,
+        r=0,
+        fill="#000000",
+        outline="#000000"
+    )
+    save_txt = canvas.create_text(
+        form_x + 385,
+        (buttons_y1 + buttons_y2) // 2,
+        text="حفظ",
+        fill="#ffffff",
+        font=("Arial", 15, "bold")
+    )
 
     def upload_template(event):
         global builder_template_path
-        path = filedialog.askopenfilename(title="اختر نموذج Word", filetypes=[("Word files", "*.docx")])
+        path = filedialog.askopenfilename(
+            title="اختر نموذج Word",
+            filetypes=[("Word files", "*.docx")]
+        )
         if path:
             builder_template_path = path
             canvas.itemconfig(template_label, text=os.path.basename(path), fill="#000000")
 
     def create_template(event):
         global builder_template_path
+
         title = title_entry.get().strip() or "نموذج_جديد"
         safe_title = title.replace("/", "-").replace("\\", "-").replace(":", "-").replace(" ", "_")
         os.makedirs(TEMPLATES_DIR, exist_ok=True)
+
         new_path = os.path.join(TEMPLATES_DIR, f"{safe_title}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.docx")
 
         doc = Document()
@@ -5255,6 +5314,7 @@ def show_card_builder(card_id=None):
         title = title_entry.get().strip()
         raw_fields = fields_text.get("1.0", "end").strip()
         fields = [line.strip() for line in raw_fields.splitlines() if line.strip()]
+
         new_id = rb_save_card(title, fields, builder_template_path, card_id)
         if new_id:
             show_written_request_menu()
