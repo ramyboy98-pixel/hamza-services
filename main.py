@@ -2,6 +2,9 @@ import tkinter as tk
 from PIL import Image, ImageTk
 import os
 import sys
+import sqlite3
+import uuid
+import tkinter.filedialog as filedialog
 import json
 import shutil
 from datetime import datetime
@@ -1491,10 +1494,13 @@ def show_written_request_menu():
 
     # Filter cards by search
     query = written_request_search_query.strip().lower()
+    dynamic_titles = [row["title"] for row in get_dynamic_cards()]
+    all_items = list(written_request_items) + dynamic_titles
+
     if query:
-        filtered_items = [item for item in written_request_items if query in item.lower()]
+        filtered_items = [item for item in all_items if query in item.lower()]
     else:
-        filtered_items = list(written_request_items)
+        filtered_items = list(all_items)
 
     # Pagination / scroll: 24 visible cards (3 columns x 8 rows)
     visible_capacity = 24
@@ -1580,8 +1586,20 @@ def show_written_request_menu():
                     show_job_request_2_form()
                 elif t == "مسابقة الجمارك":
                     show_customs_exam_form()
+                elif t == "مسابقة الشرطة":
+                    show_police_exam_form()
+                elif t == "مسابقة الحماية المدنية":
+                    show_civil_protection_exam_form()
+                elif t == "عقود ماقبل التشغيل":
+                    show_pre_employment_contract_form()
+                elif t == "مسابقة الماستر":
+                    show_master_exam_form()
                 else:
-                    show_job_request_form()
+                    dynamic_card_rows = db_rows("SELECT id FROM dynamic_cards WHERE title=? AND is_visible=1", (t,))
+                    if dynamic_card_rows:
+                        show_dynamic_card_form(dynamic_card_rows[0]["id"])
+                    else:
+                        show_job_request_form()
 
             bind_items = [card, txt]
             if subtxt:
@@ -1616,10 +1634,13 @@ def scroll_written_request_menu(event):
         return
 
     query = written_request_search_query.strip().lower()
+    dynamic_titles = [row["title"] for row in get_dynamic_cards()]
+    all_items = list(written_request_items) + dynamic_titles
+
     if query:
-        filtered_items = [item for item in written_request_items if query in item.lower()]
+        filtered_items = [item for item in all_items if query in item.lower()]
     else:
-        filtered_items = list(written_request_items)
+        filtered_items = list(all_items)
 
     max_scroll = max(0, len(filtered_items) - 24)
 
@@ -2787,6 +2808,1918 @@ def create_customs_exam_word():
     except Exception:
         pass
 
+
+police_exam_entries = {}
+police_calendar_month = date.today().month
+police_calendar_year = date.today().year
+police_birth_calendar_month = date.today().month
+police_birth_calendar_year = date.today().year
+
+
+def make_police_entry(x, y, w, placeholder, field_key):
+    value = police_exam_entries.get(field_key, "")
+
+    canvas.create_line(x - w // 2, y + 18, x + w // 2, y + 18, fill="#b8b8b8", width=2)
+
+    entry = tk.Entry(
+        root,
+        font=("Arial", 16, "bold"),
+        justify="right",
+        bd=0,
+        bg="#ffffff",
+        fg="#111111",
+        insertbackground="#111111"
+    )
+
+    if value:
+        entry.insert(0, value)
+        entry.config(fg="#111111")
+    else:
+        entry.insert(0, placeholder)
+        entry.config(fg="#b5b5b5")
+
+    def focus_in(event):
+        if entry.get() == placeholder:
+            entry.delete(0, "end")
+            entry.config(fg="#111111")
+
+    def focus_out(event):
+        if not entry.get().strip():
+            entry.delete(0, "end")
+            entry.insert(0, placeholder)
+            entry.config(fg="#b5b5b5")
+            police_exam_entries[field_key] = ""
+
+    def save_value(event=None):
+        val = entry.get()
+        police_exam_entries[field_key] = "" if val == placeholder else val
+
+    entry.bind("<FocusIn>", focus_in)
+    entry.bind("<FocusOut>", focus_out)
+    entry.bind("<KeyRelease>", save_value)
+
+    canvas.create_window(x, y, window=entry, width=w, height=34)
+    return entry
+
+
+def show_police_exam_form():
+    global current_page
+    current_page = "police_exam_form"
+    clear_screen()
+
+    width = root.winfo_width()
+    height = root.winfo_height()
+
+    if width < 10 or height < 10:
+        width, height = 1280, 720
+
+    canvas.create_rectangle(0, 0, width, height, fill="#ffffff", outline="#ffffff")
+    draw_home_sidebar("home")
+
+    right_col_x = int(width * 0.80)
+    left_col_x = int(width * 0.34)
+    field_w = int(width * 0.29)
+
+    start_y = int(height * 0.08)
+    gap = int(height * 0.075)
+
+    right_fields = [
+        ("الاسم", "first_name"),
+        ("اللقب", "last_name"),
+        ("تاريخ الميلاد", "birth_date"),
+        ("العنوان", "address"),
+        ("رقم الهاتف", "phone"),
+        ("تاريخ الطلب", "request_date"),
+    ]
+
+    left_fields = [
+        ("الى السيد / الجهة المستقبلة", "recipient"),
+        ("الرتبة", "rank"),
+        ("الشهادة", "degree"),
+        ("التخصص", "specialty"),
+        ("الجامعة", "university"),
+    ]
+
+    for index, (placeholder, key) in enumerate(right_fields):
+        y = start_y + index * gap
+
+        if key == "request_date":
+            make_police_entry(right_col_x + 24, y, field_w - 58, placeholder, key)
+            cal_icon = canvas.create_text(right_col_x - field_w // 2 + 28, y, text="📅", fill="#000000", font=("Arial", 22, "bold"))
+            cal_hitbox = canvas.create_rectangle(right_col_x - field_w // 2, y - 22, right_col_x - field_w // 2 + 58, y + 25, fill="", outline="")
+            def open_police_cal(event):
+                show_police_calendar_picker()
+            for item in (cal_icon, cal_hitbox):
+                canvas.tag_bind(item, "<Enter>", lambda e: root.config(cursor="hand2"))
+                canvas.tag_bind(item, "<Leave>", lambda e: root.config(cursor=""))
+                canvas.tag_bind(item, "<Button-1>", open_police_cal)
+
+        elif key == "birth_date":
+            make_police_entry(right_col_x + 24, y, field_w - 58, placeholder, key)
+            birth_cal_icon = canvas.create_text(right_col_x - field_w // 2 + 28, y, text="📅", fill="#000000", font=("Arial", 22, "bold"))
+            birth_cal_hitbox = canvas.create_rectangle(right_col_x - field_w // 2, y - 22, right_col_x - field_w // 2 + 58, y + 25, fill="", outline="")
+            def open_birth_cal(event):
+                show_police_birth_calendar_picker()
+            for item in (birth_cal_icon, birth_cal_hitbox):
+                canvas.tag_bind(item, "<Enter>", lambda e: root.config(cursor="hand2"))
+                canvas.tag_bind(item, "<Leave>", lambda e: root.config(cursor=""))
+                canvas.tag_bind(item, "<Button-1>", open_birth_cal)
+        else:
+            make_police_entry(right_col_x, y, field_w, placeholder, key)
+
+    for index, (placeholder, key) in enumerate(left_fields):
+        make_police_entry(left_col_x, start_y + index * gap, field_w, placeholder, key)
+
+    preview_text = canvas.create_text(
+        int(width * 0.90),
+        int(height * 0.88),
+        text="معاينة",
+        fill="#55bfff",
+        font=("Arial", 27, "bold"),
+        anchor="center"
+    )
+
+    def preview_enter(event):
+        canvas.itemconfig(preview_text, fill="#1d9fee")
+        root.config(cursor="hand2")
+
+    def preview_leave(event):
+        canvas.itemconfig(preview_text, fill="#55bfff")
+        root.config(cursor="")
+
+    def preview_click(event):
+        create_police_exam_word()
+
+    canvas.tag_bind(preview_text, "<Enter>", preview_enter)
+    canvas.tag_bind(preview_text, "<Leave>", preview_leave)
+    canvas.tag_bind(preview_text, "<Button-1>", preview_click)
+
+
+def draw_police_calendar(kind):
+    global current_page
+    current_page = "police_birth_calendar_picker" if kind == "birth" else "police_calendar_picker"
+    clear_screen()
+
+    width = root.winfo_width()
+    height = root.winfo_height()
+
+    canvas.create_rectangle(0, 0, width, height, fill="#ffffff", outline="#ffffff")
+    draw_home_sidebar("home")
+
+    if kind == "birth":
+        month = police_birth_calendar_month
+        year = police_birth_calendar_year
+    else:
+        month = police_calendar_month
+        year = police_calendar_year
+
+    panel_x1 = int(width * 0.24)
+    panel_x2 = int(width * 0.82)
+    panel_y1 = int(height * 0.12)
+    panel_y2 = int(height * 0.82)
+
+    rounded_home_rect(panel_x1, panel_y1, panel_x2, panel_y2, r=18, fill="#ffffff", outline="#dddddd", width=2)
+
+    canvas.create_text(width // 2, panel_y1 + 55, text=f"{calendar.month_name[month]} {year}", fill="#000000", font=("Arial", 28, "bold"))
+
+    prev_btn = canvas.create_text(panel_x1 + 70, panel_y1 + 55, text="‹", fill="#000000", font=("Arial", 42, "bold"))
+    next_btn = canvas.create_text(panel_x2 - 70, panel_y1 + 55, text="›", fill="#000000", font=("Arial", 42, "bold"))
+
+    def prev_month(event):
+        global police_calendar_month, police_calendar_year, police_birth_calendar_month, police_birth_calendar_year
+        if kind == "birth":
+            police_birth_calendar_month -= 1
+            if police_birth_calendar_month < 1:
+                police_birth_calendar_month = 12
+                police_birth_calendar_year -= 1
+            show_police_birth_calendar_picker()
+        else:
+            police_calendar_month -= 1
+            if police_calendar_month < 1:
+                police_calendar_month = 12
+                police_calendar_year -= 1
+            show_police_calendar_picker()
+
+    def next_month(event):
+        global police_calendar_month, police_calendar_year, police_birth_calendar_month, police_birth_calendar_year
+        if kind == "birth":
+            police_birth_calendar_month += 1
+            if police_birth_calendar_month > 12:
+                police_birth_calendar_month = 1
+                police_birth_calendar_year += 1
+            show_police_birth_calendar_picker()
+        else:
+            police_calendar_month += 1
+            if police_calendar_month > 12:
+                police_calendar_month = 1
+                police_calendar_year += 1
+            show_police_calendar_picker()
+
+    for item, cmd in [(prev_btn, prev_month), (next_btn, next_month)]:
+        canvas.tag_bind(item, "<Enter>", lambda e: root.config(cursor="hand2"))
+        canvas.tag_bind(item, "<Leave>", lambda e: root.config(cursor=""))
+        canvas.tag_bind(item, "<Button-1>", cmd)
+
+    days_header = ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"]
+    grid_x1 = panel_x1 + 80
+    grid_x2 = panel_x2 - 80
+    col_w = (grid_x2 - grid_x1) // 7
+    start_y = panel_y1 + 120
+    row_h = 58
+
+    for i, d in enumerate(days_header):
+        canvas.create_text(grid_x1 + i * col_w + col_w // 2, start_y, text=d, fill="#555555", font=("Arial", 14, "bold"))
+
+    cal = calendar.Calendar(firstweekday=5)
+    days = list(cal.itermonthdays(year, month))
+
+    for index, day in enumerate(days):
+        row = index // 7
+        col = index % 7
+        x = grid_x1 + col * col_w + col_w // 2
+        y = start_y + 45 + row * row_h
+
+        if day == 0:
+            continue
+
+        day_box = rounded_home_rect(x - 22, y - 20, x + 22, y + 20, r=10, fill="#ffffff", outline="#dddddd", width=1)
+        day_text = canvas.create_text(x, y, text=str(day), fill="#000000", font=("Arial", 15, "bold"))
+
+        def choose_day(event, selected_day=day):
+            if kind == "birth":
+                police_exam_entries["birth_date"] = f"{selected_day:02d}/{police_birth_calendar_month:02d}/{police_birth_calendar_year}"
+            else:
+                police_exam_entries["request_date"] = f"{selected_day:02d}/{police_calendar_month:02d}/{police_calendar_year}"
+            show_police_exam_form()
+
+        for item in (day_box, day_text):
+            canvas.tag_bind(item, "<Enter>", lambda e: root.config(cursor="hand2"))
+            canvas.tag_bind(item, "<Leave>", lambda e: root.config(cursor=""))
+            canvas.tag_bind(item, "<Button-1>", choose_day)
+
+
+def show_police_calendar_picker():
+    draw_police_calendar("request")
+
+
+def show_police_birth_calendar_picker():
+    draw_police_calendar("birth")
+
+
+def create_police_exam_word():
+    output_dir = os.path.join(os.path.expanduser("~"), "IDARA_DZ_Outputs")
+    os.makedirs(output_dir, exist_ok=True)
+
+    first_name = police_exam_entries.get("first_name", "").strip()
+    last_name = police_exam_entries.get("last_name", "").strip()
+    birth_date = police_exam_entries.get("birth_date", "").strip()
+    address = police_exam_entries.get("address", "").strip()
+    phone = police_exam_entries.get("phone", "").strip()
+    request_date = police_exam_entries.get("request_date", "").strip()
+    recipient = police_exam_entries.get("recipient", "").strip()
+    rank = police_exam_entries.get("rank", "").strip()
+    degree = police_exam_entries.get("degree", "").strip()
+    specialty = police_exam_entries.get("specialty", "").strip()
+    university = police_exam_entries.get("university", "").strip()
+
+    full_name = f"{last_name} {first_name}".strip()
+    safe_name = full_name if full_name else "بدون_اسم"
+    safe_name = safe_name.replace("/", "-").replace("\\", "-").replace(":", "-").replace(" ", "_")
+    output_path = os.path.join(output_dir, f"مسابقة_الشرطة_{safe_name}.docx")
+
+    doc = Document()
+
+    section = doc.sections[0]
+    section.top_margin = Cm(1.4)
+    section.bottom_margin = Cm(1.4)
+    section.right_margin = Cm(1.5)
+    section.left_margin = Cm(1.5)
+
+    p = doc.add_paragraph()
+    p.alignment = WD_ALIGN_PARAGRAPH.LEFT
+    p.paragraph_format.space_after = Pt(16)
+    r = p.add_run(f"التاريخ: {request_date if request_date else '-- / -- / 2026'}.")
+    set_job1_run_font(r, 13, True)
+
+    add_job1_paragraph(doc, f"الاسم: {first_name}", 13, True, WD_ALIGN_PARAGRAPH.RIGHT, 2)
+    add_job1_paragraph(doc, f"اللقب: {last_name}", 13, True, WD_ALIGN_PARAGRAPH.RIGHT, 2)
+    add_job1_paragraph(doc, f"الهاتف: {phone}", 13, True, WD_ALIGN_PARAGRAPH.RIGHT, 2)
+    add_job1_paragraph(doc, f"العنوان: {address}", 13, True, WD_ALIGN_PARAGRAPH.RIGHT, 2)
+    add_job1_paragraph(doc, f"تاريخ الميلاد: {birth_date}", 13, True, WD_ALIGN_PARAGRAPH.RIGHT, 28)
+
+    add_job1_paragraph(doc, f"الى السيد: {recipient}", 13, True, WD_ALIGN_PARAGRAPH.LEFT, 70)
+
+    add_job1_paragraph(doc, "الموضوع:", 14, True, WD_ALIGN_PARAGRAPH.RIGHT, 8)
+    add_job1_paragraph(doc, "طلب المشاركة في المسابقة", 14, True, WD_ALIGN_PARAGRAPH.CENTER, 38)
+
+    body = (
+        f"لي عظيم الشرف أن أتقدم إلى سيادتكم بطلبي هذا والمتمثل في طلب المشاركة في المسابقة المنظمة من طرفكم للالتحاق "
+        f"برتبة {rank}، مع العلم أني متحصل على شهادة {degree} تخصص {specialty} من جامعة {university}، "
+        "و معفى من كافة التزامات الخدمة الوطنية."
+    )
+
+    add_job1_paragraph(doc, body, 13, False, WD_ALIGN_PARAGRAPH.RIGHT, 22)
+    add_job1_paragraph(doc, "في انتظار ردكم تقبلوا منا سيدي فائق التقدير والاحترام.", 13, False, WD_ALIGN_PARAGRAPH.CENTER, 120)
+    add_job1_paragraph(doc, "امضاء المعني", 13, True, WD_ALIGN_PARAGRAPH.LEFT, 8)
+
+    doc.save(output_path)
+
+    try:
+        if sys.platform.startswith("win"):
+            os.startfile(output_path)
+        elif sys.platform == "darwin":
+            subprocess.Popen(["open", output_path])
+        else:
+            subprocess.Popen(["xdg-open", output_path])
+    except Exception:
+        pass
+
+
+civil_protection_entries = {}
+civil_calendar_month = date.today().month
+civil_calendar_year = date.today().year
+civil_birth_calendar_month = date.today().month
+civil_birth_calendar_year = date.today().year
+
+
+def make_civil_entry(x, y, w, placeholder, field_key):
+    value = civil_protection_entries.get(field_key, "")
+
+    canvas.create_line(
+        x - w // 2,
+        y + 18,
+        x + w // 2,
+        y + 18,
+        fill="#b8b8b8",
+        width=2
+    )
+
+    entry = tk.Entry(
+        root,
+        font=("Arial", 16, "bold"),
+        justify="right",
+        bd=0,
+        bg="#ffffff",
+        fg="#111111",
+        insertbackground="#111111"
+    )
+
+    if value:
+        entry.insert(0, value)
+        entry.config(fg="#111111")
+    else:
+        entry.insert(0, placeholder)
+        entry.config(fg="#b5b5b5")
+
+    def focus_in(event):
+        if entry.get() == placeholder:
+            entry.delete(0, "end")
+            entry.config(fg="#111111")
+
+    def focus_out(event):
+        if not entry.get().strip():
+            entry.delete(0, "end")
+            entry.insert(0, placeholder)
+            entry.config(fg="#b5b5b5")
+            civil_protection_entries[field_key] = ""
+
+    def save_value(event=None):
+        val = entry.get()
+        civil_protection_entries[field_key] = "" if val == placeholder else val
+
+    entry.bind("<FocusIn>", focus_in)
+    entry.bind("<FocusOut>", focus_out)
+    entry.bind("<KeyRelease>", save_value)
+
+    canvas.create_window(x, y, window=entry, width=w, height=34)
+    return entry
+
+
+def show_civil_protection_exam_form():
+    global current_page
+    current_page = "civil_protection_exam_form"
+    clear_screen()
+
+    width = root.winfo_width()
+    height = root.winfo_height()
+
+    if width < 10 or height < 10:
+        width, height = 1280, 720
+
+    canvas.create_rectangle(0, 0, width, height, fill="#ffffff", outline="#ffffff")
+    draw_home_sidebar("home")
+
+    right_col_x = int(width * 0.80)
+    left_col_x = int(width * 0.34)
+    field_w = int(width * 0.29)
+
+    start_y = int(height * 0.08)
+    gap = int(height * 0.075)
+
+    right_fields = [
+        ("الاسم", "first_name"),
+        ("اللقب", "last_name"),
+        ("تاريخ الميلاد", "birth_date"),
+        ("العنوان", "address"),
+        ("رقم الهاتف", "phone"),
+        ("تاريخ الطلب", "request_date"),
+    ]
+
+    left_fields = [
+        ("الى السيد / الجهة المستقبلة", "recipient"),
+        ("الرتبة", "rank"),
+        ("المستوى", "level"),
+        ("الشهادة", "degree"),
+    ]
+
+    for index, (placeholder, key) in enumerate(right_fields):
+        y = start_y + index * gap
+
+        if key == "request_date":
+            make_civil_entry(right_col_x + 24, y, field_w - 58, placeholder, key)
+
+            cal_icon = canvas.create_text(
+                right_col_x - field_w // 2 + 28,
+                y,
+                text="📅",
+                fill="#000000",
+                font=("Arial", 22, "bold")
+            )
+
+            cal_hitbox = canvas.create_rectangle(
+                right_col_x - field_w // 2,
+                y - 22,
+                right_col_x - field_w // 2 + 58,
+                y + 25,
+                fill="",
+                outline=""
+            )
+
+            def open_civil_cal(event):
+                show_civil_calendar_picker()
+
+            for item in (cal_icon, cal_hitbox):
+                canvas.tag_bind(item, "<Enter>", lambda e: root.config(cursor="hand2"))
+                canvas.tag_bind(item, "<Leave>", lambda e: root.config(cursor=""))
+                canvas.tag_bind(item, "<Button-1>", open_civil_cal)
+
+        elif key == "birth_date":
+            make_civil_entry(right_col_x + 24, y, field_w - 58, placeholder, key)
+
+            birth_cal_icon = canvas.create_text(
+                right_col_x - field_w // 2 + 28,
+                y,
+                text="📅",
+                fill="#000000",
+                font=("Arial", 22, "bold")
+            )
+
+            birth_cal_hitbox = canvas.create_rectangle(
+                right_col_x - field_w // 2,
+                y - 22,
+                right_col_x - field_w // 2 + 58,
+                y + 25,
+                fill="",
+                outline=""
+            )
+
+            def open_birth_cal(event):
+                show_civil_birth_calendar_picker()
+
+            for item in (birth_cal_icon, birth_cal_hitbox):
+                canvas.tag_bind(item, "<Enter>", lambda e: root.config(cursor="hand2"))
+                canvas.tag_bind(item, "<Leave>", lambda e: root.config(cursor=""))
+                canvas.tag_bind(item, "<Button-1>", open_birth_cal)
+
+        else:
+            make_civil_entry(right_col_x, y, field_w, placeholder, key)
+
+    for index, (placeholder, key) in enumerate(left_fields):
+        make_civil_entry(left_col_x, start_y + index * gap, field_w, placeholder, key)
+
+    preview_text = canvas.create_text(
+        int(width * 0.90),
+        int(height * 0.88),
+        text="معاينة",
+        fill="#55bfff",
+        font=("Arial", 27, "bold"),
+        anchor="center"
+    )
+
+    def preview_enter(event):
+        canvas.itemconfig(preview_text, fill="#1d9fee")
+        root.config(cursor="hand2")
+
+    def preview_leave(event):
+        canvas.itemconfig(preview_text, fill="#55bfff")
+        root.config(cursor="")
+
+    def preview_click(event):
+        create_civil_protection_exam_word()
+
+    canvas.tag_bind(preview_text, "<Enter>", preview_enter)
+    canvas.tag_bind(preview_text, "<Leave>", preview_leave)
+    canvas.tag_bind(preview_text, "<Button-1>", preview_click)
+
+
+def draw_civil_calendar(kind):
+    global current_page
+    current_page = "civil_birth_calendar_picker" if kind == "birth" else "civil_calendar_picker"
+    clear_screen()
+
+    width = root.winfo_width()
+    height = root.winfo_height()
+
+    canvas.create_rectangle(0, 0, width, height, fill="#ffffff", outline="#ffffff")
+    draw_home_sidebar("home")
+
+    if kind == "birth":
+        month = civil_birth_calendar_month
+        year = civil_birth_calendar_year
+    else:
+        month = civil_calendar_month
+        year = civil_calendar_year
+
+    panel_x1 = int(width * 0.24)
+    panel_x2 = int(width * 0.82)
+    panel_y1 = int(height * 0.12)
+    panel_y2 = int(height * 0.82)
+
+    rounded_home_rect(
+        panel_x1,
+        panel_y1,
+        panel_x2,
+        panel_y2,
+        r=18,
+        fill="#ffffff",
+        outline="#dddddd",
+        width=2
+    )
+
+    canvas.create_text(
+        width // 2,
+        panel_y1 + 55,
+        text=f"{calendar.month_name[month]} {year}",
+        fill="#000000",
+        font=("Arial", 28, "bold")
+    )
+
+    prev_btn = canvas.create_text(panel_x1 + 70, panel_y1 + 55, text="‹", fill="#000000", font=("Arial", 42, "bold"))
+    next_btn = canvas.create_text(panel_x2 - 70, panel_y1 + 55, text="›", fill="#000000", font=("Arial", 42, "bold"))
+
+    def prev_month(event):
+        global civil_calendar_month, civil_calendar_year, civil_birth_calendar_month, civil_birth_calendar_year
+        if kind == "birth":
+            civil_birth_calendar_month -= 1
+            if civil_birth_calendar_month < 1:
+                civil_birth_calendar_month = 12
+                civil_birth_calendar_year -= 1
+            show_civil_birth_calendar_picker()
+        else:
+            civil_calendar_month -= 1
+            if civil_calendar_month < 1:
+                civil_calendar_month = 12
+                civil_calendar_year -= 1
+            show_civil_calendar_picker()
+
+    def next_month(event):
+        global civil_calendar_month, civil_calendar_year, civil_birth_calendar_month, civil_birth_calendar_year
+        if kind == "birth":
+            civil_birth_calendar_month += 1
+            if civil_birth_calendar_month > 12:
+                civil_birth_calendar_month = 1
+                civil_birth_calendar_year += 1
+            show_civil_birth_calendar_picker()
+        else:
+            civil_calendar_month += 1
+            if civil_calendar_month > 12:
+                civil_calendar_month = 1
+                civil_calendar_year += 1
+            show_civil_calendar_picker()
+
+    for item, cmd in [(prev_btn, prev_month), (next_btn, next_month)]:
+        canvas.tag_bind(item, "<Enter>", lambda e: root.config(cursor="hand2"))
+        canvas.tag_bind(item, "<Leave>", lambda e: root.config(cursor=""))
+        canvas.tag_bind(item, "<Button-1>", cmd)
+
+    days_header = ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"]
+    grid_x1 = panel_x1 + 80
+    grid_x2 = panel_x2 - 80
+    col_w = (grid_x2 - grid_x1) // 7
+    start_y = panel_y1 + 120
+    row_h = 58
+
+    for i, d in enumerate(days_header):
+        canvas.create_text(
+            grid_x1 + i * col_w + col_w // 2,
+            start_y,
+            text=d,
+            fill="#555555",
+            font=("Arial", 14, "bold")
+        )
+
+    cal = calendar.Calendar(firstweekday=5)
+    days = list(cal.itermonthdays(year, month))
+
+    for index, day in enumerate(days):
+        row = index // 7
+        col = index % 7
+        x = grid_x1 + col * col_w + col_w // 2
+        y = start_y + 45 + row * row_h
+
+        if day == 0:
+            continue
+
+        day_box = rounded_home_rect(
+            x - 22,
+            y - 20,
+            x + 22,
+            y + 20,
+            r=10,
+            fill="#ffffff",
+            outline="#dddddd",
+            width=1
+        )
+
+        day_text = canvas.create_text(
+            x,
+            y,
+            text=str(day),
+            fill="#000000",
+            font=("Arial", 15, "bold")
+        )
+
+        def choose_day(event, selected_day=day):
+            if kind == "birth":
+                civil_protection_entries["birth_date"] = f"{selected_day:02d}/{civil_birth_calendar_month:02d}/{civil_birth_calendar_year}"
+            else:
+                civil_protection_entries["request_date"] = f"{selected_day:02d}/{civil_calendar_month:02d}/{civil_calendar_year}"
+            show_civil_protection_exam_form()
+
+        for item in (day_box, day_text):
+            canvas.tag_bind(item, "<Enter>", lambda e: root.config(cursor="hand2"))
+            canvas.tag_bind(item, "<Leave>", lambda e: root.config(cursor=""))
+            canvas.tag_bind(item, "<Button-1>", choose_day)
+
+
+def show_civil_calendar_picker():
+    draw_civil_calendar("request")
+
+
+def show_civil_birth_calendar_picker():
+    draw_civil_calendar("birth")
+
+
+def create_civil_protection_exam_word():
+    output_dir = os.path.join(os.path.expanduser("~"), "IDARA_DZ_Outputs")
+    os.makedirs(output_dir, exist_ok=True)
+
+    first_name = civil_protection_entries.get("first_name", "").strip()
+    last_name = civil_protection_entries.get("last_name", "").strip()
+    birth_date = civil_protection_entries.get("birth_date", "").strip()
+    address = civil_protection_entries.get("address", "").strip()
+    phone = civil_protection_entries.get("phone", "").strip()
+    request_date = civil_protection_entries.get("request_date", "").strip()
+    recipient = civil_protection_entries.get("recipient", "").strip()
+    rank = civil_protection_entries.get("rank", "").strip()
+    level = civil_protection_entries.get("level", "").strip()
+    degree = civil_protection_entries.get("degree", "").strip()
+
+    full_name = f"{last_name} {first_name}".strip()
+    safe_name = full_name if full_name else "بدون_اسم"
+    safe_name = safe_name.replace("/", "-").replace("\\", "-").replace(":", "-").replace(" ", "_")
+    output_path = os.path.join(output_dir, f"مسابقة_الحماية_المدنية_{safe_name}.docx")
+
+    doc = Document()
+
+    section = doc.sections[0]
+    section.top_margin = Cm(1.4)
+    section.bottom_margin = Cm(1.4)
+    section.right_margin = Cm(1.5)
+    section.left_margin = Cm(1.5)
+
+    p = doc.add_paragraph()
+    p.alignment = WD_ALIGN_PARAGRAPH.LEFT
+    p.paragraph_format.space_after = Pt(16)
+    r = p.add_run(f"التاريخ: {request_date if request_date else '-- / -- / 2026'}.")
+    set_job1_run_font(r, 13, True)
+
+    add_job1_paragraph(doc, f"الاسم: {first_name}", 13, True, WD_ALIGN_PARAGRAPH.RIGHT, 2)
+    add_job1_paragraph(doc, f"اللقب: {last_name}", 13, True, WD_ALIGN_PARAGRAPH.RIGHT, 2)
+    add_job1_paragraph(doc, f"الهاتف: {phone}", 13, True, WD_ALIGN_PARAGRAPH.RIGHT, 2)
+    add_job1_paragraph(doc, f"العنوان: {address}", 13, True, WD_ALIGN_PARAGRAPH.RIGHT, 2)
+    add_job1_paragraph(doc, f"تاريخ الميلاد: {birth_date}", 13, True, WD_ALIGN_PARAGRAPH.RIGHT, 26)
+
+    add_job1_paragraph(doc, f"الى السيد: {recipient}", 13, True, WD_ALIGN_PARAGRAPH.LEFT, 70)
+
+    add_job1_paragraph(doc, "الموضوع:", 14, True, WD_ALIGN_PARAGRAPH.RIGHT, 8)
+    add_job1_paragraph(doc, "طلب المشاركة في المسابقة", 14, True, WD_ALIGN_PARAGRAPH.CENTER, 38)
+
+    body_1 = (
+        f"لي عظيم الشرف أن أتقدم إلى سيادتكم بطلبي هذا والمتمثل في طلب المشاركة في المسابقة المنظمة من طرفكم "
+        f"للالتحاق برتبة {rank}، مع العلم أني متحصل على مستوى {level} وحامل لشهادة {degree}."
+    )
+
+    body_2 = "كما أتوفر على الشروط المطلوبة والمنصوص عليها في شروط المسابقة."
+
+    add_job1_paragraph(doc, body_1, 13, False, WD_ALIGN_PARAGRAPH.RIGHT, 18)
+    add_job1_paragraph(doc, body_2, 13, False, WD_ALIGN_PARAGRAPH.RIGHT, 22)
+    add_job1_paragraph(doc, "في انتظار ردكم تقبلوا منا سيدي فائق التقدير والاحترام.", 13, False, WD_ALIGN_PARAGRAPH.CENTER, 120)
+
+    add_job1_paragraph(doc, "امضاء المعني", 13, True, WD_ALIGN_PARAGRAPH.LEFT, 8)
+
+    doc.save(output_path)
+
+    try:
+        if sys.platform.startswith("win"):
+            os.startfile(output_path)
+        elif sys.platform == "darwin":
+            subprocess.Popen(["open", output_path])
+        else:
+            subprocess.Popen(["xdg-open", output_path])
+    except Exception:
+        pass
+
+
+pre_employment_entries = {}
+pre_employment_calendar_month = date.today().month
+pre_employment_calendar_year = date.today().year
+
+
+def make_pre_employment_entry(x, y, w, placeholder, field_key):
+    value = pre_employment_entries.get(field_key, "")
+
+    canvas.create_line(
+        x - w // 2,
+        y + 18,
+        x + w // 2,
+        y + 18,
+        fill="#b8b8b8",
+        width=2
+    )
+
+    entry = tk.Entry(
+        root,
+        font=("Arial", 16, "bold"),
+        justify="right",
+        bd=0,
+        bg="#ffffff",
+        fg="#111111",
+        insertbackground="#111111"
+    )
+
+    if value:
+        entry.insert(0, value)
+        entry.config(fg="#111111")
+    else:
+        entry.insert(0, placeholder)
+        entry.config(fg="#b5b5b5")
+
+    def focus_in(event):
+        if entry.get() == placeholder:
+            entry.delete(0, "end")
+            entry.config(fg="#111111")
+
+    def focus_out(event):
+        if not entry.get().strip():
+            entry.delete(0, "end")
+            entry.insert(0, placeholder)
+            entry.config(fg="#b5b5b5")
+            pre_employment_entries[field_key] = ""
+
+    def save_value(event=None):
+        val = entry.get()
+        pre_employment_entries[field_key] = "" if val == placeholder else val
+
+    entry.bind("<FocusIn>", focus_in)
+    entry.bind("<FocusOut>", focus_out)
+    entry.bind("<KeyRelease>", save_value)
+
+    canvas.create_window(x, y, window=entry, width=w, height=34)
+    return entry
+
+
+def show_pre_employment_contract_form():
+    global current_page
+    current_page = "pre_employment_contract_form"
+    clear_screen()
+
+    width = root.winfo_width()
+    height = root.winfo_height()
+
+    if width < 10 or height < 10:
+        width, height = 1280, 720
+
+    canvas.create_rectangle(0, 0, width, height, fill="#ffffff", outline="#ffffff")
+    draw_home_sidebar("home")
+
+    right_col_x = int(width * 0.80)
+    left_col_x = int(width * 0.34)
+    field_w = int(width * 0.29)
+
+    start_y = int(height * 0.10)
+    gap = int(height * 0.085)
+
+    right_fields = [
+        ("الاسم", "first_name"),
+        ("اللقب", "last_name"),
+        ("العنوان", "address"),
+        ("رقم الهاتف", "phone"),
+        ("تاريخ الطلب", "request_date"),
+    ]
+
+    left_fields = [
+        ("الشهادة", "degree"),
+        ("التخصص", "specialty"),
+        ("الدفعة", "promotion"),
+    ]
+
+    for index, (placeholder, key) in enumerate(right_fields):
+        y = start_y + index * gap
+
+        if key == "request_date":
+            make_pre_employment_entry(right_col_x + 24, y, field_w - 58, placeholder, key)
+
+            cal_icon = canvas.create_text(
+                right_col_x - field_w // 2 + 28,
+                y,
+                text="📅",
+                fill="#000000",
+                font=("Arial", 22, "bold")
+            )
+
+            cal_hitbox = canvas.create_rectangle(
+                right_col_x - field_w // 2,
+                y - 22,
+                right_col_x - field_w // 2 + 58,
+                y + 25,
+                fill="",
+                outline=""
+            )
+
+            def open_pre_employment_cal(event):
+                show_pre_employment_calendar_picker()
+
+            for item in (cal_icon, cal_hitbox):
+                canvas.tag_bind(item, "<Enter>", lambda e: root.config(cursor="hand2"))
+                canvas.tag_bind(item, "<Leave>", lambda e: root.config(cursor=""))
+                canvas.tag_bind(item, "<Button-1>", open_pre_employment_cal)
+
+        else:
+            make_pre_employment_entry(right_col_x, y, field_w, placeholder, key)
+
+    for index, (placeholder, key) in enumerate(left_fields):
+        make_pre_employment_entry(left_col_x, start_y + index * gap, field_w, placeholder, key)
+
+    preview_text = canvas.create_text(
+        int(width * 0.90),
+        int(height * 0.88),
+        text="معاينة",
+        fill="#55bfff",
+        font=("Arial", 27, "bold"),
+        anchor="center"
+    )
+
+    def preview_enter(event):
+        canvas.itemconfig(preview_text, fill="#1d9fee")
+        root.config(cursor="hand2")
+
+    def preview_leave(event):
+        canvas.itemconfig(preview_text, fill="#55bfff")
+        root.config(cursor="")
+
+    def preview_click(event):
+        create_pre_employment_contract_word()
+
+    canvas.tag_bind(preview_text, "<Enter>", preview_enter)
+    canvas.tag_bind(preview_text, "<Leave>", preview_leave)
+    canvas.tag_bind(preview_text, "<Button-1>", preview_click)
+
+
+def show_pre_employment_calendar_picker():
+    global current_page
+    current_page = "pre_employment_calendar_picker"
+    clear_screen()
+
+    width = root.winfo_width()
+    height = root.winfo_height()
+
+    canvas.create_rectangle(0, 0, width, height, fill="#ffffff", outline="#ffffff")
+    draw_home_sidebar("home")
+
+    panel_x1 = int(width * 0.24)
+    panel_x2 = int(width * 0.82)
+    panel_y1 = int(height * 0.12)
+    panel_y2 = int(height * 0.82)
+
+    rounded_home_rect(
+        panel_x1,
+        panel_y1,
+        panel_x2,
+        panel_y2,
+        r=18,
+        fill="#ffffff",
+        outline="#dddddd",
+        width=2
+    )
+
+    canvas.create_text(
+        width // 2,
+        panel_y1 + 55,
+        text=f"{calendar.month_name[pre_employment_calendar_month]} {pre_employment_calendar_year}",
+        fill="#000000",
+        font=("Arial", 28, "bold")
+    )
+
+    prev_btn = canvas.create_text(panel_x1 + 70, panel_y1 + 55, text="‹", fill="#000000", font=("Arial", 42, "bold"))
+    next_btn = canvas.create_text(panel_x2 - 70, panel_y1 + 55, text="›", fill="#000000", font=("Arial", 42, "bold"))
+
+    def prev_month(event):
+        global pre_employment_calendar_month, pre_employment_calendar_year
+        pre_employment_calendar_month -= 1
+        if pre_employment_calendar_month < 1:
+            pre_employment_calendar_month = 12
+            pre_employment_calendar_year -= 1
+        show_pre_employment_calendar_picker()
+
+    def next_month(event):
+        global pre_employment_calendar_month, pre_employment_calendar_year
+        pre_employment_calendar_month += 1
+        if pre_employment_calendar_month > 12:
+            pre_employment_calendar_month = 1
+            pre_employment_calendar_year += 1
+        show_pre_employment_calendar_picker()
+
+    for item, cmd in [(prev_btn, prev_month), (next_btn, next_month)]:
+        canvas.tag_bind(item, "<Enter>", lambda e: root.config(cursor="hand2"))
+        canvas.tag_bind(item, "<Leave>", lambda e: root.config(cursor=""))
+        canvas.tag_bind(item, "<Button-1>", cmd)
+
+    days_header = ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"]
+    grid_x1 = panel_x1 + 80
+    grid_x2 = panel_x2 - 80
+    col_w = (grid_x2 - grid_x1) // 7
+    start_y = panel_y1 + 120
+    row_h = 58
+
+    for i, d in enumerate(days_header):
+        canvas.create_text(
+            grid_x1 + i * col_w + col_w // 2,
+            start_y,
+            text=d,
+            fill="#555555",
+            font=("Arial", 14, "bold")
+        )
+
+    cal = calendar.Calendar(firstweekday=5)
+    days = list(cal.itermonthdays(pre_employment_calendar_year, pre_employment_calendar_month))
+
+    for index, day in enumerate(days):
+        row = index // 7
+        col = index % 7
+        x = grid_x1 + col * col_w + col_w // 2
+        y = start_y + 45 + row * row_h
+
+        if day == 0:
+            continue
+
+        day_box = rounded_home_rect(
+            x - 22,
+            y - 20,
+            x + 22,
+            y + 20,
+            r=10,
+            fill="#ffffff",
+            outline="#dddddd",
+            width=1
+        )
+
+        day_text = canvas.create_text(
+            x,
+            y,
+            text=str(day),
+            fill="#000000",
+            font=("Arial", 15, "bold")
+        )
+
+        def choose_day(event, selected_day=day):
+            pre_employment_entries["request_date"] = f"{selected_day:02d}/{pre_employment_calendar_month:02d}/{pre_employment_calendar_year}"
+            show_pre_employment_contract_form()
+
+        for item in (day_box, day_text):
+            canvas.tag_bind(item, "<Enter>", lambda e: root.config(cursor="hand2"))
+            canvas.tag_bind(item, "<Leave>", lambda e: root.config(cursor=""))
+            canvas.tag_bind(item, "<Button-1>", choose_day)
+
+
+def create_pre_employment_contract_word():
+    output_dir = os.path.join(os.path.expanduser("~"), "IDARA_DZ_Outputs")
+    os.makedirs(output_dir, exist_ok=True)
+
+    first_name = pre_employment_entries.get("first_name", "").strip()
+    last_name = pre_employment_entries.get("last_name", "").strip()
+    address = pre_employment_entries.get("address", "").strip()
+    phone = pre_employment_entries.get("phone", "").strip()
+    request_date = pre_employment_entries.get("request_date", "").strip()
+    degree = pre_employment_entries.get("degree", "").strip()
+    specialty = pre_employment_entries.get("specialty", "").strip()
+    promotion = pre_employment_entries.get("promotion", "").strip()
+
+    full_name = f"{last_name} {first_name}".strip()
+    safe_name = full_name if full_name else "بدون_اسم"
+    safe_name = safe_name.replace("/", "-").replace("\\", "-").replace(":", "-").replace(" ", "_")
+    output_path = os.path.join(output_dir, f"عقود_ماقبل_التشغيل_{safe_name}.docx")
+
+    doc = Document()
+
+    section = doc.sections[0]
+    section.top_margin = Cm(1.4)
+    section.bottom_margin = Cm(1.4)
+    section.right_margin = Cm(1.5)
+    section.left_margin = Cm(1.5)
+
+    p = doc.add_paragraph()
+    p.alignment = WD_ALIGN_PARAGRAPH.LEFT
+    p.paragraph_format.space_after = Pt(16)
+    r = p.add_run(f"التاريخ: {request_date if request_date else '-- / -- / 2026'}.")
+    set_job1_run_font(r, 13, True)
+
+    add_job1_paragraph(doc, f"الاسم: {first_name}", 13, True, WD_ALIGN_PARAGRAPH.RIGHT, 2)
+    add_job1_paragraph(doc, f"اللقب: {last_name}", 13, True, WD_ALIGN_PARAGRAPH.RIGHT, 2)
+    add_job1_paragraph(doc, f"الهاتف: {phone}", 13, True, WD_ALIGN_PARAGRAPH.RIGHT, 2)
+    add_job1_paragraph(doc, f"العنوان: {address}", 13, True, WD_ALIGN_PARAGRAPH.RIGHT, 42)
+
+    add_job1_paragraph(doc, "الى السيد: مدير الوكالة الوطنية للتشغيل", 13, False, WD_ALIGN_PARAGRAPH.LEFT, 8)
+    add_job1_paragraph(doc, "لولاية:", 13, False, WD_ALIGN_PARAGRAPH.LEFT, 60)
+
+    add_job1_paragraph(doc, "الموضوع:", 14, True, WD_ALIGN_PARAGRAPH.RIGHT, 8)
+    add_job1_paragraph(doc, "طلب الحصول على عمل في اطار عقود ما قبل التشغيل", 14, True, WD_ALIGN_PARAGRAPH.CENTER, 38)
+
+    body = (
+        "لي عظيم الشرف أن أتقدم إلى سيادتكم بطلبي هذا والمتمثل في طلب في الحصول على عمل في إطار عقود ما قبل التشغيل "
+        f"و احيطكم علما اني متحصل على شهادة {degree} تخصص {specialty} دفعة {promotion}."
+    )
+
+    add_job1_paragraph(doc, body, 13, False, WD_ALIGN_PARAGRAPH.RIGHT, 24)
+    add_job1_paragraph(doc, "في انتظار ردكم تقبلوا منا سيدي فائق التقدير والاحترام.", 13, False, WD_ALIGN_PARAGRAPH.CENTER, 120)
+
+    add_job1_paragraph(doc, "امضاء المعني", 13, True, WD_ALIGN_PARAGRAPH.LEFT, 8)
+
+    doc.save(output_path)
+
+    try:
+        if sys.platform.startswith("win"):
+            os.startfile(output_path)
+        elif sys.platform == "darwin":
+            subprocess.Popen(["open", output_path])
+        else:
+            subprocess.Popen(["xdg-open", output_path])
+    except Exception:
+        pass
+
+
+master_exam_entries = {}
+master_calendar_month = date.today().month
+master_calendar_year = date.today().year
+master_birth_calendar_month = date.today().month
+master_birth_calendar_year = date.today().year
+
+
+def make_master_entry(x, y, w, placeholder, field_key):
+    value = master_exam_entries.get(field_key, "")
+
+    canvas.create_line(
+        x - w // 2,
+        y + 18,
+        x + w // 2,
+        y + 18,
+        fill="#b8b8b8",
+        width=2
+    )
+
+    entry = tk.Entry(
+        root,
+        font=("Arial", 16, "bold"),
+        justify="right",
+        bd=0,
+        bg="#ffffff",
+        fg="#111111",
+        insertbackground="#111111"
+    )
+
+    if value:
+        entry.insert(0, value)
+        entry.config(fg="#111111")
+    else:
+        entry.insert(0, placeholder)
+        entry.config(fg="#b5b5b5")
+
+    def focus_in(event):
+        if entry.get() == placeholder:
+            entry.delete(0, "end")
+            entry.config(fg="#111111")
+
+    def focus_out(event):
+        if not entry.get().strip():
+            entry.delete(0, "end")
+            entry.insert(0, placeholder)
+            entry.config(fg="#b5b5b5")
+            master_exam_entries[field_key] = ""
+
+    def save_value(event=None):
+        val = entry.get()
+        master_exam_entries[field_key] = "" if val == placeholder else val
+
+    entry.bind("<FocusIn>", focus_in)
+    entry.bind("<FocusOut>", focus_out)
+    entry.bind("<KeyRelease>", save_value)
+
+    canvas.create_window(x, y, window=entry, width=w, height=34)
+    return entry
+
+
+def show_master_exam_form():
+    global current_page
+    current_page = "master_exam_form"
+    clear_screen()
+
+    width = root.winfo_width()
+    height = root.winfo_height()
+
+    if width < 10 or height < 10:
+        width, height = 1280, 720
+
+    canvas.create_rectangle(0, 0, width, height, fill="#ffffff", outline="#ffffff")
+    draw_home_sidebar("home")
+
+    right_col_x = int(width * 0.80)
+    left_col_x = int(width * 0.34)
+    field_w = int(width * 0.29)
+
+    start_y = int(height * 0.055)
+    gap = int(height * 0.062)
+
+    right_fields = [
+        ("الاسم", "first_name"),
+        ("اللقب", "last_name"),
+        ("رقم الهاتف", "phone"),
+        ("العنوان", "address"),
+        ("تاريخ الميلاد", "birth_date"),
+        ("تاريخ الطلب", "request_date"),
+        ("إلى السيد رئيس قسم", "department_head"),
+        ("جامعة", "header_university"),
+        ("لولاية", "header_state"),
+    ]
+
+    left_fields = [
+        ("متابعة دراسة الماستر في", "master_field"),
+        ("التخصص", "master_specialty"),
+        ("بجامعة", "study_university"),
+        ("السنة الجامعية", "academic_year"),
+        ("شهادة ليسانس LMD", "license_degree"),
+        ("تخصص", "license_specialty"),
+        ("من طرف جامعة", "license_university"),
+        ("لولاية", "license_state"),
+        ("الدفعة", "promotion"),
+    ]
+
+    for index, (placeholder, key) in enumerate(right_fields):
+        y = start_y + index * gap
+
+        if key == "request_date":
+            make_master_entry(right_col_x + 24, y, field_w - 58, placeholder, key)
+
+            cal_icon = canvas.create_text(
+                right_col_x - field_w // 2 + 28,
+                y,
+                text="📅",
+                fill="#000000",
+                font=("Arial", 22, "bold")
+            )
+
+            cal_hitbox = canvas.create_rectangle(
+                right_col_x - field_w // 2,
+                y - 22,
+                right_col_x - field_w // 2 + 58,
+                y + 25,
+                fill="",
+                outline=""
+            )
+
+            def open_master_cal(event):
+                show_master_calendar_picker()
+
+            for item in (cal_icon, cal_hitbox):
+                canvas.tag_bind(item, "<Enter>", lambda e: root.config(cursor="hand2"))
+                canvas.tag_bind(item, "<Leave>", lambda e: root.config(cursor=""))
+                canvas.tag_bind(item, "<Button-1>", open_master_cal)
+
+        elif key == "birth_date":
+            make_master_entry(right_col_x + 24, y, field_w - 58, placeholder, key)
+
+            birth_cal_icon = canvas.create_text(
+                right_col_x - field_w // 2 + 28,
+                y,
+                text="📅",
+                fill="#000000",
+                font=("Arial", 22, "bold")
+            )
+
+            birth_cal_hitbox = canvas.create_rectangle(
+                right_col_x - field_w // 2,
+                y - 22,
+                right_col_x - field_w // 2 + 58,
+                y + 25,
+                fill="",
+                outline=""
+            )
+
+            def open_birth_cal(event):
+                show_master_birth_calendar_picker()
+
+            for item in (birth_cal_icon, birth_cal_hitbox):
+                canvas.tag_bind(item, "<Enter>", lambda e: root.config(cursor="hand2"))
+                canvas.tag_bind(item, "<Leave>", lambda e: root.config(cursor=""))
+                canvas.tag_bind(item, "<Button-1>", open_birth_cal)
+
+        else:
+            make_master_entry(right_col_x, y, field_w, placeholder, key)
+
+    for index, (placeholder, key) in enumerate(left_fields):
+        make_master_entry(left_col_x, start_y + index * gap, field_w, placeholder, key)
+
+    preview_text = canvas.create_text(
+        int(width * 0.90),
+        int(height * 0.88),
+        text="معاينة",
+        fill="#55bfff",
+        font=("Arial", 27, "bold"),
+        anchor="center"
+    )
+
+    def preview_enter(event):
+        canvas.itemconfig(preview_text, fill="#1d9fee")
+        root.config(cursor="hand2")
+
+    def preview_leave(event):
+        canvas.itemconfig(preview_text, fill="#55bfff")
+        root.config(cursor="")
+
+    def preview_click(event):
+        create_master_exam_word()
+
+    canvas.tag_bind(preview_text, "<Enter>", preview_enter)
+    canvas.tag_bind(preview_text, "<Leave>", preview_leave)
+    canvas.tag_bind(preview_text, "<Button-1>", preview_click)
+
+
+def draw_master_calendar(kind):
+    global current_page
+    current_page = "master_birth_calendar_picker" if kind == "birth" else "master_calendar_picker"
+    clear_screen()
+
+    width = root.winfo_width()
+    height = root.winfo_height()
+
+    canvas.create_rectangle(0, 0, width, height, fill="#ffffff", outline="#ffffff")
+    draw_home_sidebar("home")
+
+    if kind == "birth":
+        month = master_birth_calendar_month
+        year = master_birth_calendar_year
+    else:
+        month = master_calendar_month
+        year = master_calendar_year
+
+    panel_x1 = int(width * 0.24)
+    panel_x2 = int(width * 0.82)
+    panel_y1 = int(height * 0.12)
+    panel_y2 = int(height * 0.82)
+
+    rounded_home_rect(
+        panel_x1,
+        panel_y1,
+        panel_x2,
+        panel_y2,
+        r=18,
+        fill="#ffffff",
+        outline="#dddddd",
+        width=2
+    )
+
+    canvas.create_text(
+        width // 2,
+        panel_y1 + 55,
+        text=f"{calendar.month_name[month]} {year}",
+        fill="#000000",
+        font=("Arial", 28, "bold")
+    )
+
+    prev_btn = canvas.create_text(panel_x1 + 70, panel_y1 + 55, text="‹", fill="#000000", font=("Arial", 42, "bold"))
+    next_btn = canvas.create_text(panel_x2 - 70, panel_y1 + 55, text="›", fill="#000000", font=("Arial", 42, "bold"))
+
+    def prev_month(event):
+        global master_calendar_month, master_calendar_year, master_birth_calendar_month, master_birth_calendar_year
+        if kind == "birth":
+            master_birth_calendar_month -= 1
+            if master_birth_calendar_month < 1:
+                master_birth_calendar_month = 12
+                master_birth_calendar_year -= 1
+            show_master_birth_calendar_picker()
+        else:
+            master_calendar_month -= 1
+            if master_calendar_month < 1:
+                master_calendar_month = 12
+                master_calendar_year -= 1
+            show_master_calendar_picker()
+
+    def next_month(event):
+        global master_calendar_month, master_calendar_year, master_birth_calendar_month, master_birth_calendar_year
+        if kind == "birth":
+            master_birth_calendar_month += 1
+            if master_birth_calendar_month > 12:
+                master_birth_calendar_month = 1
+                master_birth_calendar_year += 1
+            show_master_birth_calendar_picker()
+        else:
+            master_calendar_month += 1
+            if master_calendar_month > 12:
+                master_calendar_month = 1
+                master_calendar_year += 1
+            show_master_calendar_picker()
+
+    for item, cmd in [(prev_btn, prev_month), (next_btn, next_month)]:
+        canvas.tag_bind(item, "<Enter>", lambda e: root.config(cursor="hand2"))
+        canvas.tag_bind(item, "<Leave>", lambda e: root.config(cursor=""))
+        canvas.tag_bind(item, "<Button-1>", cmd)
+
+    days_header = ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"]
+    grid_x1 = panel_x1 + 80
+    grid_x2 = panel_x2 - 80
+    col_w = (grid_x2 - grid_x1) // 7
+    start_y = panel_y1 + 120
+    row_h = 58
+
+    for i, d in enumerate(days_header):
+        canvas.create_text(
+            grid_x1 + i * col_w + col_w // 2,
+            start_y,
+            text=d,
+            fill="#555555",
+            font=("Arial", 14, "bold")
+        )
+
+    cal = calendar.Calendar(firstweekday=5)
+    days = list(cal.itermonthdays(year, month))
+
+    for index, day in enumerate(days):
+        row = index // 7
+        col = index % 7
+        x = grid_x1 + col * col_w + col_w // 2
+        y = start_y + 45 + row * row_h
+
+        if day == 0:
+            continue
+
+        day_box = rounded_home_rect(
+            x - 22,
+            y - 20,
+            x + 22,
+            y + 20,
+            r=10,
+            fill="#ffffff",
+            outline="#dddddd",
+            width=1
+        )
+
+        day_text = canvas.create_text(
+            x,
+            y,
+            text=str(day),
+            fill="#000000",
+            font=("Arial", 15, "bold")
+        )
+
+        def choose_day(event, selected_day=day):
+            if kind == "birth":
+                master_exam_entries["birth_date"] = f"{selected_day:02d}/{master_birth_calendar_month:02d}/{master_birth_calendar_year}"
+            else:
+                master_exam_entries["request_date"] = f"{selected_day:02d}/{master_calendar_month:02d}/{master_calendar_year}"
+            show_master_exam_form()
+
+        for item in (day_box, day_text):
+            canvas.tag_bind(item, "<Enter>", lambda e: root.config(cursor="hand2"))
+            canvas.tag_bind(item, "<Leave>", lambda e: root.config(cursor=""))
+            canvas.tag_bind(item, "<Button-1>", choose_day)
+
+
+def show_master_calendar_picker():
+    draw_master_calendar("request")
+
+
+def show_master_birth_calendar_picker():
+    draw_master_calendar("birth")
+
+
+def create_master_exam_word():
+    output_dir = os.path.join(os.path.expanduser("~"), "IDARA_DZ_Outputs")
+    os.makedirs(output_dir, exist_ok=True)
+
+    first_name = master_exam_entries.get("first_name", "").strip()
+    last_name = master_exam_entries.get("last_name", "").strip()
+    phone = master_exam_entries.get("phone", "").strip()
+    address = master_exam_entries.get("address", "").strip()
+    birth_date = master_exam_entries.get("birth_date", "").strip()
+    request_date = master_exam_entries.get("request_date", "").strip()
+    department_head = master_exam_entries.get("department_head", "").strip()
+    header_university = master_exam_entries.get("header_university", "").strip()
+    header_state = master_exam_entries.get("header_state", "").strip()
+    master_field = master_exam_entries.get("master_field", "").strip()
+    master_specialty = master_exam_entries.get("master_specialty", "").strip()
+    study_university = master_exam_entries.get("study_university", "").strip()
+    academic_year = master_exam_entries.get("academic_year", "").strip()
+    license_degree = master_exam_entries.get("license_degree", "").strip()
+    license_specialty = master_exam_entries.get("license_specialty", "").strip()
+    license_university = master_exam_entries.get("license_university", "").strip()
+    license_state = master_exam_entries.get("license_state", "").strip()
+    promotion = master_exam_entries.get("promotion", "").strip()
+
+    full_name = f"{last_name} {first_name}".strip()
+    safe_name = full_name if full_name else "بدون_اسم"
+    safe_name = safe_name.replace("/", "-").replace("\\", "-").replace(":", "-").replace(" ", "_")
+    output_path = os.path.join(output_dir, f"مسابقة_الماستر_{safe_name}.docx")
+
+    doc = Document()
+
+    section = doc.sections[0]
+    section.top_margin = Cm(1.4)
+    section.bottom_margin = Cm(1.4)
+    section.right_margin = Cm(1.5)
+    section.left_margin = Cm(1.5)
+
+    p = doc.add_paragraph()
+    p.alignment = WD_ALIGN_PARAGRAPH.LEFT
+    p.paragraph_format.space_after = Pt(16)
+    r = p.add_run(f"التاريخ: {request_date if request_date else '-- / -- / 2026'}.")
+    set_job1_run_font(r, 13, True)
+
+    add_job1_paragraph(doc, f"الاسم: {first_name}", 13, True, WD_ALIGN_PARAGRAPH.RIGHT, 2)
+    add_job1_paragraph(doc, f"اللقب: {last_name}", 13, True, WD_ALIGN_PARAGRAPH.RIGHT, 2)
+    add_job1_paragraph(doc, f"الهاتف: {phone}", 13, True, WD_ALIGN_PARAGRAPH.RIGHT, 2)
+    add_job1_paragraph(doc, f"العنوان: {address}", 13, True, WD_ALIGN_PARAGRAPH.RIGHT, 2)
+    add_job1_paragraph(doc, f"تاريخ الميلاد: {birth_date}", 13, True, WD_ALIGN_PARAGRAPH.RIGHT, 20)
+
+    add_job1_paragraph(doc, f"الى السيد رئيس قسم: {department_head}", 13, True, WD_ALIGN_PARAGRAPH.LEFT, 10)
+    add_job1_paragraph(doc, f"جامعة {header_university} لولاية {header_state}", 13, False, WD_ALIGN_PARAGRAPH.LEFT, 62)
+
+    add_job1_paragraph(doc, "الموضوع:", 14, True, WD_ALIGN_PARAGRAPH.RIGHT, 8)
+    add_job1_paragraph(doc, "طلب المشاركة في مسابقة الالتحاق بالماستر", 14, True, WD_ALIGN_PARAGRAPH.CENTER, 36)
+
+    body_1 = (
+        f"لي عظيم الشرف أن أتقدم إلى سيادتكم بطلبي هذا والمتمثل في طلب تسجيلي ضمن قوائم المترشحين لمتابعة دراسة الماستر "
+        f"في {master_field} تخصص {master_specialty} بجامعة {study_university} في إطار السنة الجامعية {academic_year} "
+        "بغية مواصلة الدراسة الأكاديمية."
+    )
+
+    body_2 = (
+        f"علما أني متحصل على شهادة ليسانس نظام * LMD * {license_degree} تخصص {license_specialty} "
+        f"من طرف جامعة {license_university} لولاية {license_state} دفعة {promotion}."
+    )
+
+    add_job1_paragraph(doc, body_1, 13, False, WD_ALIGN_PARAGRAPH.RIGHT, 18)
+    add_job1_paragraph(doc, body_2, 13, False, WD_ALIGN_PARAGRAPH.RIGHT, 22)
+    add_job1_paragraph(doc, "في انتظار ردكم تقبلوا منا سيدي فائق التقدير والاحترام.", 13, False, WD_ALIGN_PARAGRAPH.CENTER, 120)
+
+    add_job1_paragraph(doc, "امضاء المعني", 13, True, WD_ALIGN_PARAGRAPH.LEFT, 8)
+
+    doc.save(output_path)
+
+    try:
+        if sys.platform.startswith("win"):
+            os.startfile(output_path)
+        elif sys.platform == "darwin":
+            subprocess.Popen(["open", output_path])
+        else:
+            subprocess.Popen(["xdg-open", output_path])
+    except Exception:
+        pass
+
+
+# ============================================================
+# محرك البطاقات الديناميكية - يضاف فوق النظام القديم دون تغيير التصميم
+# ============================================================
+DYNAMIC_BASE_DIR = os.path.join(os.path.expanduser("~"), "IDARA_DZ")
+DYNAMIC_TEMPLATES_DIR = os.path.join(DYNAMIC_BASE_DIR, "templates")
+DYNAMIC_OUTPUT_DIR = os.path.join(DYNAMIC_BASE_DIR, "outputs")
+DYNAMIC_DB_PATH = os.path.join(DYNAMIC_BASE_DIR, "idara_dynamic.db")
+
+os.makedirs(DYNAMIC_BASE_DIR, exist_ok=True)
+os.makedirs(DYNAMIC_TEMPLATES_DIR, exist_ok=True)
+os.makedirs(DYNAMIC_OUTPUT_DIR, exist_ok=True)
+
+dynamic_form_values = {}
+dynamic_current_card_id = None
+
+
+def init_dynamic_database():
+    conn = sqlite3.connect(DYNAMIC_DB_PATH)
+    cur = conn.cursor()
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS dynamic_cards (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            template_path TEXT,
+            is_visible INTEGER DEFAULT 1,
+            sort_order INTEGER DEFAULT 999,
+            created_at TEXT
+        )
+    """)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS dynamic_fields (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            card_id INTEGER NOT NULL,
+            field_name TEXT NOT NULL,
+            field_type TEXT DEFAULT 'text',
+            sort_order INTEGER DEFAULT 999
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+
+def db_rows(query, params=()):
+    init_dynamic_database()
+    conn = sqlite3.connect(DYNAMIC_DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cur = conn.cursor()
+    cur.execute(query, params)
+    rows = cur.fetchall()
+    conn.close()
+    return rows
+
+
+def db_run(query, params=()):
+    init_dynamic_database()
+    conn = sqlite3.connect(DYNAMIC_DB_PATH)
+    cur = conn.cursor()
+    cur.execute(query, params)
+    conn.commit()
+    last_id = cur.lastrowid
+    conn.close()
+    return last_id
+
+
+def get_dynamic_cards():
+    return db_rows("SELECT * FROM dynamic_cards WHERE is_visible=1 ORDER BY sort_order ASC, id ASC")
+
+
+def get_dynamic_fields(card_id):
+    return db_rows("SELECT * FROM dynamic_fields WHERE card_id=? ORDER BY sort_order ASC, id ASC", (card_id,))
+
+
+def add_dynamic_card(title, fields_text, template_path):
+    title = (title or "").strip()
+    if not title:
+        return None
+
+    stored_template = ""
+    if template_path and os.path.exists(template_path):
+        ext = os.path.splitext(template_path)[1].lower()
+        stored_template = os.path.join(DYNAMIC_TEMPLATES_DIR, f"{uuid.uuid4().hex}{ext}")
+        shutil.copy2(template_path, stored_template)
+
+    max_rows = db_rows("SELECT MAX(sort_order) AS m FROM dynamic_cards")
+    sort_order = 999
+    if max_rows and max_rows[0]["m"] is not None:
+        sort_order = int(max_rows[0]["m"]) + 1
+
+    card_id = db_run(
+        "INSERT INTO dynamic_cards(title, template_path, is_visible, sort_order, created_at) VALUES (?, ?, 1, ?, ?)",
+        (title, stored_template, sort_order, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    )
+
+    for idx, line in enumerate((fields_text or "").splitlines()):
+        line = line.strip()
+        if not line:
+            continue
+        if "|" in line:
+            name, field_type = line.split("|", 1)
+            name = name.strip()
+            field_type = field_type.strip()
+        else:
+            name = line
+            field_type = "text"
+        if name:
+            db_run(
+                "INSERT INTO dynamic_fields(card_id, field_name, field_type, sort_order) VALUES (?, ?, ?, ?)",
+                (card_id, name, field_type, idx)
+            )
+    return card_id
+
+
+def delete_dynamic_card(card_id):
+    db_run("DELETE FROM dynamic_fields WHERE card_id=?", (card_id,))
+    db_run("DELETE FROM dynamic_cards WHERE id=?", (card_id,))
+
+
+def replace_placeholders_in_docx(doc, data):
+    def patch_paragraph(paragraph):
+        text = paragraph.text
+        original = text
+        for key, value in data.items():
+            text = text.replace("{{" + key + "}}", str(value))
+        if text != original:
+            for run in paragraph.runs:
+                run.text = ""
+            if paragraph.runs:
+                paragraph.runs[0].text = text
+            else:
+                paragraph.add_run(text)
+
+    for paragraph in doc.paragraphs:
+        patch_paragraph(paragraph)
+
+    for table in doc.tables:
+        for row in table.rows:
+            for cell in row.cells:
+                for paragraph in cell.paragraphs:
+                    patch_paragraph(paragraph)
+
+
+def open_dynamic_word(card_id):
+    rows = db_rows("SELECT * FROM dynamic_cards WHERE id=?", (card_id,))
+    if not rows:
+        return
+    card = rows[0]
+    template = card["template_path"]
+    if not template or not os.path.exists(template):
+        show_dynamic_notice("هذه البطاقة لا تملك نموذج Word بعد.")
+        return
+
+    doc = Document(template)
+    replace_placeholders_in_docx(doc, dynamic_form_values)
+
+    safe_title = card["title"].replace("/", "-").replace("\\", "-").replace(":", "-").replace(" ", "_")
+    client = (dynamic_form_values.get("اللقب", "") + "_" + dynamic_form_values.get("الاسم", "")).strip("_") or "بدون_اسم"
+    client = client.replace("/", "-").replace("\\", "-").replace(":", "-").replace(" ", "_")
+    path = os.path.join(DYNAMIC_OUTPUT_DIR, f"{safe_title}_{client}_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.docx")
+    doc.save(path)
+
+    try:
+        if sys.platform.startswith("win"):
+            os.startfile(path)
+        elif sys.platform == "darwin":
+            subprocess.Popen(["open", path])
+        else:
+            subprocess.Popen(["xdg-open", path])
+    except Exception:
+        pass
+
+
+def show_dynamic_notice(msg):
+    global current_page
+    current_page = "dynamic_notice"
+    clear_screen()
+    width = root.winfo_width()
+    height = root.winfo_height()
+    canvas.create_rectangle(0, 0, width, height, fill="#ffffff", outline="#ffffff")
+    draw_home_sidebar("settings")
+    center_x = 120 + (width - 120) // 2
+    canvas.create_text(center_x, height // 2, text=msg, fill="#000000", font=("Arial", 26, "bold"))
+
+
+def show_settings_placeholder():
+    show_settings_main()
+
+
+def show_settings_main():
+    global current_page
+    current_page = "settings"
+    init_dynamic_database()
+    clear_screen()
+
+    width = root.winfo_width()
+    height = root.winfo_height()
+    canvas.create_rectangle(0, 0, width, height, fill="#ffffff", outline="#ffffff")
+    draw_home_sidebar("settings")
+
+    center_x = 120 + (width - 120) // 2
+    canvas.create_text(center_x, int(height * 0.14), text="الإعدادات", fill="#000000", font=("Arial", 44, "bold"))
+
+    card_w = 360
+    card_h = 180
+    y1 = int(height * 0.30)
+    gap = 50
+    x1 = center_x - card_w - gap // 2
+
+    def draw_card(x, y, title, desc, command):
+        shadow = rounded_home_rect(x + 8, y + 10, x + card_w + 8, y + card_h + 10, r=14, fill="#d9d9d9", outline="#d9d9d9")
+        card = rounded_home_rect(x, y, x + card_w, y + card_h, r=14, fill="#ffffff", outline="#dddddd", width=1)
+        t = canvas.create_text(x + card_w // 2, y + 50, text=title, fill="#000000", font=("Arial", 23, "bold"))
+        d = canvas.create_text(x + card_w // 2, y + 112, text=desc, fill="#666666", font=("Arial", 13, "bold"), justify="center", width=card_w - 40)
+        def enter(e):
+            canvas.itemconfig(card, fill="#fafafa")
+            root.config(cursor="hand2")
+        def leave(e):
+            canvas.itemconfig(card, fill="#ffffff")
+            root.config(cursor="")
+        def click(e):
+            command()
+        for item in (card, t, d):
+            canvas.tag_bind(item, "<Enter>", enter)
+            canvas.tag_bind(item, "<Leave>", leave)
+            canvas.tag_bind(item, "<Button-1>", click)
+
+    draw_card(x1, y1, "إدارة الطلبات الخطية", "إضافة بطاقات جديدة وحذفها وربطها بقوالب Word.", show_dynamic_cards_manager)
+    draw_card(x1 + card_w + gap, y1, "مجلد القوالب", "فتح مجلد templates الخاص بنماذج Word الديناميكية.", open_dynamic_templates_folder)
+
+
+def open_dynamic_templates_folder():
+    try:
+        if sys.platform.startswith("win"):
+            os.startfile(DYNAMIC_TEMPLATES_DIR)
+        elif sys.platform == "darwin":
+            subprocess.Popen(["open", DYNAMIC_TEMPLATES_DIR])
+        else:
+            subprocess.Popen(["xdg-open", DYNAMIC_TEMPLATES_DIR])
+    except Exception:
+        pass
+
+
+def show_dynamic_cards_manager():
+    global current_page
+    current_page = "dynamic_cards_manager"
+    init_dynamic_database()
+    clear_screen()
+
+    width = root.winfo_width()
+    height = root.winfo_height()
+    canvas.create_rectangle(0, 0, width, height, fill="#ffffff", outline="#ffffff")
+    draw_home_sidebar("settings")
+
+    center_x = 120 + (width - 120) // 2
+    canvas.create_text(center_x, 85, text="إدارة الطلبات الخطية", fill="#000000", font=("Arial", 36, "bold"))
+
+    add_btn = rounded_home_rect(width - 330, 130, width - 125, 182, r=12, fill="#000000", outline="#000000")
+    add_text = canvas.create_text(width - 228, 156, text="+ إضافة بطاقة", fill="#ffffff", font=("Arial", 16, "bold"))
+
+    def add_enter(e):
+        canvas.itemconfig(add_btn, fill="#111111")
+        root.config(cursor="hand2")
+    def add_leave(e):
+        canvas.itemconfig(add_btn, fill="#000000")
+        root.config(cursor="")
+    def add_click(e):
+        show_add_dynamic_card_form()
+    for item in (add_btn, add_text):
+        canvas.tag_bind(item, "<Enter>", add_enter)
+        canvas.tag_bind(item, "<Leave>", add_leave)
+        canvas.tag_bind(item, "<Button-1>", add_click)
+
+    cards = get_dynamic_cards()
+    if not cards:
+        canvas.create_text(center_x, height // 2, text="لا توجد بطاقات ديناميكية بعد", fill="#777777", font=("Arial", 25, "bold"))
+        return
+
+    x1 = 220
+    x2 = width - 140
+    y = 230
+    row_h = 70
+    for card in cards:
+        row = rounded_home_rect(x1, y, x2, y + row_h, r=12, fill="#ffffff", outline="#dddddd", width=1)
+        title = canvas.create_text(x2 - 30, y + row_h // 2, text=card["title"], fill="#000000", font=("Arial", 20, "bold"), anchor="e")
+        delete = canvas.create_text(x1 + 65, y + row_h // 2, text="حذف", fill="#d62323", font=("Arial", 15, "bold"))
+        def delete_click(e, cid=card["id"]):
+            delete_dynamic_card(cid)
+            show_dynamic_cards_manager()
+        for item in (delete,):
+            canvas.tag_bind(item, "<Enter>", lambda e: root.config(cursor="hand2"))
+            canvas.tag_bind(item, "<Leave>", lambda e: root.config(cursor=""))
+            canvas.tag_bind(item, "<Button-1>", delete_click)
+        y += row_h + 14
+
+
+def show_add_dynamic_card_form():
+    global current_page
+    current_page = "add_dynamic_card"
+    clear_screen()
+
+    width = root.winfo_width()
+    height = root.winfo_height()
+    canvas.create_rectangle(0, 0, width, height, fill="#ffffff", outline="#ffffff")
+    draw_home_sidebar("settings")
+
+    center_x = 120 + (width - 120) // 2
+    canvas.create_text(center_x, 80, text="إضافة بطاقة طلب خطي", fill="#000000", font=("Arial", 34, "bold"))
+
+    canvas.create_text(center_x + 300, 150, text="اسم البطاقة", fill="#000000", font=("Arial", 17, "bold"), anchor="e")
+    title_entry = tk.Entry(root, font=("Arial", 16, "bold"), justify="right", bd=1, relief="solid")
+    canvas.create_window(center_x, 190, window=title_entry, width=600, height=44)
+
+    canvas.create_text(center_x + 300, 255, text="الحقول - كل حقل في سطر", fill="#000000", font=("Arial", 17, "bold"), anchor="e")
+    canvas.create_text(center_x, 287, text="مثال: الاسم | text    تاريخ الطلب | date    الرتبة | text", fill="#777777", font=("Arial", 12, "bold"))
+    fields_box = tk.Text(root, font=("Arial", 15), bd=1, relief="solid", wrap="word")
+    canvas.create_window(center_x, 400, window=fields_box, width=600, height=175)
+
+    template_path = {"value": ""}
+    template_label = canvas.create_text(center_x, 525, text="لم يتم اختيار نموذج Word", fill="#777777", font=("Arial", 13, "bold"))
+
+    choose_btn = rounded_home_rect(center_x - 300, 555, center_x - 70, 607, r=12, fill="#f4f4f4", outline="#d5d5d5", width=1)
+    choose_text = canvas.create_text(center_x - 185, 581, text="اختيار نموذج Word", fill="#000000", font=("Arial", 14, "bold"))
+
+    def choose_template(e):
+        path = filedialog.askopenfilename(title="اختر نموذج Word", filetypes=[("Word files", "*.docx")])
+        if path:
+            template_path["value"] = path
+            canvas.itemconfig(template_label, text=os.path.basename(path), fill="#000000")
+
+    for item in (choose_btn, choose_text):
+        canvas.tag_bind(item, "<Enter>", lambda e: root.config(cursor="hand2"))
+        canvas.tag_bind(item, "<Leave>", lambda e: root.config(cursor=""))
+        canvas.tag_bind(item, "<Button-1>", choose_template)
+
+    save_btn = rounded_home_rect(center_x + 70, 555, center_x + 300, 607, r=12, fill="#000000", outline="#000000", width=1)
+    save_text = canvas.create_text(center_x + 185, 581, text="حفظ البطاقة", fill="#ffffff", font=("Arial", 14, "bold"))
+
+    def save_card(e):
+        add_dynamic_card(title_entry.get(), fields_box.get("1.0", "end"), template_path["value"])
+        show_dynamic_cards_manager()
+
+    for item in (save_btn, save_text):
+        canvas.tag_bind(item, "<Enter>", lambda e: root.config(cursor="hand2"))
+        canvas.tag_bind(item, "<Leave>", lambda e: root.config(cursor=""))
+        canvas.tag_bind(item, "<Button-1>", save_card)
+
+
+def make_dynamic_entry(x, y, w, placeholder, field_name):
+    canvas.create_line(x - w // 2, y + 18, x + w // 2, y + 18, fill="#b8b8b8", width=2)
+    entry = tk.Entry(root, font=("Arial", 16, "bold"), justify="right", bd=0, bg="#ffffff", fg="#111111", insertbackground="#111111")
+    entry.insert(0, placeholder)
+    entry.config(fg="#b5b5b5")
+    def focus_in(event):
+        if entry.get() == placeholder:
+            entry.delete(0, "end")
+            entry.config(fg="#111111")
+    def focus_out(event):
+        if not entry.get().strip():
+            entry.delete(0, "end")
+            entry.insert(0, placeholder)
+            entry.config(fg="#b5b5b5")
+            dynamic_form_values[field_name] = ""
+    def save_value(event=None):
+        val = entry.get()
+        dynamic_form_values[field_name] = "" if val == placeholder else val
+    entry.bind("<FocusIn>", focus_in)
+    entry.bind("<FocusOut>", focus_out)
+    entry.bind("<KeyRelease>", save_value)
+    canvas.create_window(x, y, window=entry, width=w, height=34)
+
+
+def show_dynamic_card_form(card_id):
+    global current_page, dynamic_current_card_id, dynamic_form_values
+    current_page = "dynamic_card_form"
+    dynamic_current_card_id = card_id
+    dynamic_form_values = {}
+
+    rows = db_rows("SELECT * FROM dynamic_cards WHERE id=?", (card_id,))
+    if not rows:
+        return
+    card = rows[0]
+    fields = get_dynamic_fields(card_id)
+
+    clear_screen()
+    width = root.winfo_width()
+    height = root.winfo_height()
+    canvas.create_rectangle(0, 0, width, height, fill="#ffffff", outline="#ffffff")
+    draw_home_sidebar("home")
+
+    center_x = 120 + (width - 120) // 2
+    canvas.create_text(center_x, 60, text=card["title"], fill="#000000", font=("Arial", 34, "bold"))
+
+    right_col_x = int(width * 0.80)
+    left_col_x = int(width * 0.34)
+    field_w = int(width * 0.29)
+    start_y = int(height * 0.12)
+    gap = int(height * 0.075)
+
+    for idx, field in enumerate(fields):
+        x = right_col_x if idx % 2 == 0 else left_col_x
+        y = start_y + (idx // 2) * gap
+        make_dynamic_entry(x, y, field_w, field["field_name"], field["field_name"])
+
+    preview = canvas.create_text(int(width * 0.90), int(height * 0.88), text="معاينة", fill="#55bfff", font=("Arial", 27, "bold"), anchor="center")
+    def enter(e):
+        canvas.itemconfig(preview, fill="#1d9fee")
+        root.config(cursor="hand2")
+    def leave(e):
+        canvas.itemconfig(preview, fill="#55bfff")
+        root.config(cursor="")
+    def click(e):
+        open_dynamic_word(card_id)
+    canvas.tag_bind(preview, "<Enter>", enter)
+    canvas.tag_bind(preview, "<Leave>", leave)
+    canvas.tag_bind(preview, "<Button-1>", click)
+
 def make_light_underline_entry(x, y, w, placeholder, field_key):
     value = job_form_entries.get(field_key, "")
 
@@ -3174,6 +5107,34 @@ def on_resize(event):
             show_customs_calendar_picker()
         elif current_page == "customs_birth_calendar_picker":
             show_customs_birth_calendar_picker()
+        elif current_page == "police_exam_form":
+            show_police_exam_form()
+        elif current_page == "police_calendar_picker":
+            show_police_calendar_picker()
+        elif current_page == "police_birth_calendar_picker":
+            show_police_birth_calendar_picker()
+        elif current_page == "civil_protection_exam_form":
+            show_civil_protection_exam_form()
+        elif current_page == "civil_calendar_picker":
+            show_civil_calendar_picker()
+        elif current_page == "civil_birth_calendar_picker":
+            show_civil_birth_calendar_picker()
+        elif current_page == "pre_employment_contract_form":
+            show_pre_employment_contract_form()
+        elif current_page == "pre_employment_calendar_picker":
+            show_pre_employment_calendar_picker()
+        elif current_page == "master_exam_form":
+            show_master_exam_form()
+        elif current_page == "master_calendar_picker":
+            show_master_calendar_picker()
+        elif current_page == "master_birth_calendar_picker":
+            show_master_birth_calendar_picker()
+        elif current_page == "dynamic_cards_manager":
+            show_dynamic_cards_manager()
+        elif current_page == "add_dynamic_card":
+            show_add_dynamic_card_form()
+        elif current_page == "dynamic_card_form":
+            show_dynamic_card_form(dynamic_current_card_id)
         elif current_page == "job1_calendar_picker":
             show_job1_calendar_picker()
         elif current_page == "written_request_menu":
