@@ -5109,17 +5109,19 @@ def scroll_written_request_menu(event):
 
 
 def show_card_builder(card_id=None):
-    global current_page, builder_fields, builder_template_path
+    global current_page, builder_template_path
     current_page = "card_builder"
     clear_screen()
+
     width = root.winfo_width()
     height = root.winfo_height()
+
     canvas.create_rectangle(0, 0, width, height, fill="#ffffff", outline="#ffffff")
     draw_home_sidebar("home")
 
     editing = card_id is not None
     old_title = ""
-    builder_fields = []
+    old_fields = ""
     builder_template_path = ""
 
     if editing:
@@ -5127,117 +5129,154 @@ def show_card_builder(card_id=None):
         if rows:
             old_title = rows[0]["title"]
             builder_template_path = rows[0]["template_path"] or ""
-        builder_fields = [f["name"] for f in rb_fields(card_id)]
+        old_fields = "\n".join([f["name"] for f in rb_fields(card_id)])
 
-    # split panels
-    left_x1, left_x2 = 150, width//2 - 20
-    right_x1, right_x2 = width//2 + 20, width - 50
+    sidebar_w = 120
+    content_w = width - sidebar_w
+    center_x = sidebar_w + content_w // 2
 
-    canvas.create_text(right_x2 - 20, 55, text="تصميم الاستمارة", fill="#000000", font=("Arial", 26, "bold"), anchor="e")
-    canvas.create_text(left_x2 - 20, 55, text="النموذج", fill="#000000", font=("Arial", 26, "bold"), anchor="e")
-
-    title_entry = tk.Entry(root, font=("Arial", 16, "bold"), justify="right", bd=1, relief="solid")
-    title_entry.insert(0, old_title)
-    canvas.create_window((right_x1+right_x2)//2, 105, window=title_entry, width=right_x2-right_x1-40, height=38)
-
-    field_entry = tk.Entry(root, font=("Arial", 15, "bold"), justify="right", bd=1, relief="solid")
-    field_entry.insert(0, "اسم الخانة")
-    field_entry.config(fg="#888888")
-    canvas.create_window(right_x2-180, 160, window=field_entry, width=260, height=34)
-
-    def fe_in(e):
-        if field_entry.get() == "اسم الخانة":
-            field_entry.delete(0, "end")
-            field_entry.config(fg="#111111")
-
-    field_entry.bind("<FocusIn>", fe_in)
-
-    def redraw_fields():
-        for item in builder_preview_items:
-            try: canvas.delete(item)
-            except: pass
-        builder_preview_items.clear()
-        y = 215
-        for idx, name in enumerate(builder_fields):
-            bg = rounded_home_rect(right_x1+25, y-20, right_x2-25, y+20, r=8, fill="#f7f7f7", outline="#dddddd")
-            tx = canvas.create_text(right_x2-45, y, text=name, fill="#000000", font=("Arial", 14, "bold"), anchor="e")
-            rm = canvas.create_text(right_x1+55, y, text="×", fill="#d62323", font=("Arial", 18, "bold"))
-            builder_preview_items.extend([bg, tx, rm])
-            def remove(e, i=idx):
-                if 0 <= i < len(builder_fields):
-                    builder_fields.pop(i)
-                    redraw_fields()
-            canvas.tag_bind(rm, "<Enter>", lambda e: root.config(cursor="hand2"))
-            canvas.tag_bind(rm, "<Leave>", lambda e: root.config(cursor=""))
-            canvas.tag_bind(rm, "<Button-1>", remove)
-            y += 45
-
-    add_btn = rounded_home_rect(right_x1+35, 142, right_x1+145, 178, r=8, fill="#000000", outline="#000000")
-    add_tx = canvas.create_text(right_x1+90, 160, text="إضافة", fill="#ffffff", font=("Arial", 13, "bold"))
-
-    def add_field(e):
-        name = field_entry.get().strip()
-        if name and name != "اسم الخانة":
-            builder_fields.append(name)
-            field_entry.delete(0, "end")
-            redraw_fields()
-
-    for it in (add_btn, add_tx):
-        canvas.tag_bind(it, "<Enter>", lambda e: root.config(cursor="hand2"))
-        canvas.tag_bind(it, "<Leave>", lambda e: root.config(cursor=""))
-        canvas.tag_bind(it, "<Button-1>", add_field)
-
-    # template side
-    preview_box = tk.Text(root, font=("Arial", 12), wrap="word", bd=1, relief="solid")
-    preview_box.tag_configure("right", justify="right")
-    preview_box.insert("1.0", rb_read_template_text(builder_template_path))
-    preview_box.tag_add("right", "1.0", "end")
-    preview_box.config(state="disabled")
-    canvas.create_window((left_x1+left_x2)//2, 290, window=preview_box, width=left_x2-left_x1-30, height=370)
-
-    tpl_label = canvas.create_text((left_x1+left_x2)//2, 105, text=os.path.basename(builder_template_path) if builder_template_path else "لم يتم رفع نموذج", fill="#777777", font=("Arial", 13, "bold"))
-
-    def choose_tpl(e):
-        global builder_template_path
-        p = filedialog.askopenfilename(title="اختر نموذج Word", filetypes=[("Word files", "*.docx")])
-        if p:
-            builder_template_path = p
-            canvas.itemconfig(tpl_label, text=os.path.basename(p), fill="#000000")
-            preview_box.config(state="normal")
-            preview_box.delete("1.0", "end")
-            preview_box.insert("1.0", rb_read_template_text(p))
-            preview_box.tag_add("right", "1.0", "end")
-            preview_box.config(state="disabled")
-
-    tpl_btn = rounded_home_rect(left_x1+35, 130, left_x1+230, 172, r=8, fill="#f4f4f4", outline="#d0d0d0")
-    tpl_tx = canvas.create_text(left_x1+132, 151, text="رفع نموذج Word", fill="#000000", font=("Arial", 13, "bold"))
-    for it in (tpl_btn, tpl_tx):
-        canvas.tag_bind(it, "<Enter>", lambda e: root.config(cursor="hand2"))
-        canvas.tag_bind(it, "<Leave>", lambda e: root.config(cursor=""))
-        canvas.tag_bind(it, "<Button-1>", choose_tpl)
-
-    hint = (
-        "ضع داخل ملف Word علامات بنفس أسماء الخانات مثل:\n"
-        "{{الاسم}}  {{اللقب}}  {{تاريخ الطلب}}\n"
-        "ثم اضغط حفظ."
+    canvas.create_text(
+        center_x,
+        62,
+        text="اضافة طلب خطي" if not editing else "تعديل طلب خطي",
+        fill="#000000",
+        font=("Arial", 36, "bold")
     )
-    canvas.create_text((left_x1+left_x2)//2, height-125, text=hint, fill="#555555", font=("Arial", 12, "bold"), justify="center")
 
-    save_btn = rounded_home_rect(width-280, height-85, width-70, height-35, r=12, fill="#000000", outline="#000000")
-    save_tx = canvas.create_text(width-175, height-60, text="حفظ البطاقة", fill="#ffffff", font=("Arial", 15, "bold"))
+    form_w = int(content_w * 0.56)
+    form_x = center_x
+    label_x = form_x + form_w // 2
 
-    def save(e):
+    canvas.create_text(
+        label_x,
+        145,
+        text="اسم الطلب",
+        fill="#000000",
+        font=("Arial", 24, "bold"),
+        anchor="e"
+    )
+
+    title_entry = tk.Entry(
+        root,
+        font=("Arial", 18, "bold"),
+        justify="right",
+        bd=1,
+        relief="solid",
+        bg="#ffffff",
+        fg="#000000",
+        insertbackground="#000000"
+    )
+    title_entry.insert(0, old_title)
+    canvas.create_window(form_x, 205, window=title_entry, width=form_w, height=48)
+
+    canvas.create_text(
+        label_x,
+        285,
+        text="خانات الاستمارة",
+        fill="#000000",
+        font=("Arial", 24, "bold"),
+        anchor="e"
+    )
+
+    fields_text = tk.Text(
+        root,
+        font=("Arial", 17, "bold"),
+        bd=1,
+        relief="solid",
+        wrap="word",
+        bg="#ffffff",
+        fg="#000000",
+        insertbackground="#000000"
+    )
+    fields_text.tag_configure("right", justify="right")
+    fields_text.insert("1.0", old_fields)
+    fields_text.tag_add("right", "1.0", "end")
+    fields_text.bind("<KeyRelease>", lambda e: fields_text.tag_add("right", "1.0", "end"))
+    canvas.create_window(form_x, 455, window=fields_text, width=form_w, height=250)
+
+    template_label = canvas.create_text(
+        form_x,
+        610,
+        text=os.path.basename(builder_template_path) if builder_template_path else "",
+        fill="#555555",
+        font=("Arial", 12, "bold")
+    )
+
+    btn_y1 = 655
+    btn_y2 = 700
+
+    upload_btn = rounded_home_rect(form_x - 275, btn_y1, form_x - 95, btn_y2, r=0, fill="#000000", outline="#000000")
+    upload_txt = canvas.create_text(form_x - 185, (btn_y1 + btn_y2) // 2, text="رفع نموذج", fill="#ffffff", font=("Arial", 15, "bold"))
+
+    create_btn = rounded_home_rect(form_x - 75, btn_y1, form_x + 105, btn_y2, r=0, fill="#000000", outline="#000000")
+    create_txt = canvas.create_text(form_x + 15, (btn_y1 + btn_y2) // 2, text="إنشاء نموذج", fill="#ffffff", font=("Arial", 15, "bold"))
+
+    save_btn = rounded_home_rect(form_x + 315, btn_y1, form_x + 455, btn_y2, r=0, fill="#000000", outline="#000000")
+    save_txt = canvas.create_text(form_x + 385, (btn_y1 + btn_y2) // 2, text="حفظ", fill="#ffffff", font=("Arial", 15, "bold"))
+
+    def upload_template(event):
+        global builder_template_path
+        path = filedialog.askopenfilename(title="اختر نموذج Word", filetypes=[("Word files", "*.docx")])
+        if path:
+            builder_template_path = path
+            canvas.itemconfig(template_label, text=os.path.basename(path), fill="#000000")
+
+    def create_template(event):
+        global builder_template_path
+        title = title_entry.get().strip() or "نموذج_جديد"
+        safe_title = title.replace("/", "-").replace("\\", "-").replace(":", "-").replace(" ", "_")
+        os.makedirs(TEMPLATES_DIR, exist_ok=True)
+        new_path = os.path.join(TEMPLATES_DIR, f"{safe_title}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.docx")
+
+        doc = Document()
+        p = doc.add_paragraph()
+        p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+        run = p.add_run("اكتب نموذج الطلب هنا، واستعمل علامات الخانات مثل: {{الاسم}} {{اللقب}} {{تاريخ الطلب}}")
+        try:
+            set_job1_run_font(run, 14, False)
+        except Exception:
+            pass
+        doc.save(new_path)
+
+        builder_template_path = new_path
+        canvas.itemconfig(template_label, text=os.path.basename(new_path), fill="#000000")
+
+        try:
+            if sys.platform.startswith("win"):
+                os.startfile(new_path)
+            elif sys.platform == "darwin":
+                subprocess.Popen(["open", new_path])
+            else:
+                subprocess.Popen(["xdg-open", new_path])
+        except Exception:
+            pass
+
+    def save_card(event):
         title = title_entry.get().strip()
-        new_id = rb_save_card(title, builder_fields, builder_template_path, card_id)
+        raw_fields = fields_text.get("1.0", "end").strip()
+        fields = [line.strip() for line in raw_fields.splitlines() if line.strip()]
+        new_id = rb_save_card(title, fields, builder_template_path, card_id)
         if new_id:
             show_written_request_menu()
 
-    for it in (save_btn, save_tx):
-        canvas.tag_bind(it, "<Enter>", lambda e: root.config(cursor="hand2"))
-        canvas.tag_bind(it, "<Leave>", lambda e: root.config(cursor=""))
-        canvas.tag_bind(it, "<Button-1>", save)
+    def enter(event, b):
+        canvas.itemconfig(b, fill="#1a1a1a")
+        root.config(cursor="hand2")
 
-    redraw_fields()
+    def leave(event, b):
+        canvas.itemconfig(b, fill="#000000")
+        root.config(cursor="")
+
+    for btn, txt, cmd in [
+        (upload_btn, upload_txt, upload_template),
+        (create_btn, create_txt, create_template),
+        (save_btn, save_txt, save_card),
+    ]:
+        for it in (btn, txt):
+            canvas.tag_bind(it, "<Enter>", lambda e, b=btn: enter(e, b))
+            canvas.tag_bind(it, "<Leave>", lambda e, b=btn: leave(e, b))
+            canvas.tag_bind(it, "<Button-1>", cmd)
+
 
 
 def show_dynamic_form(card_id):
