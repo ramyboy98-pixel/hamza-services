@@ -197,7 +197,7 @@ def draw_home_sidebar(active="home"):
     canvas.create_line(sidebar_w, 0, sidebar_w, height, fill="#dedede", width=1)
 
     canvas.create_rectangle(20, 22, 42, 44, fill="#000000", outline="#000000")
-    canvas.create_text(52, 33, text="IDARA DZ", fill="#111111", font=("Arial", 12, "bold"), anchor="w")
+    canvas.create_text(52, 33, text="IDARA DZ", fill="#111111", font=("Arial", 12, "bold"), anchor="e")
 
     items = [
         ("⌂", "الرئيسية", "home", 105),
@@ -306,8 +306,8 @@ def show_home():
         canvas.create_rectangle(center_x - 245, logo_y - 54, center_x - 160, logo_y + 54, fill="#000000", outline="#000000")
         canvas.create_text(center_x - 202, logo_y, text="▰", fill="#ffffff", font=("Arial", 38, "bold"))
 
-    canvas.create_text(center_x - 105, logo_y, text="IDARA", fill="#000000", font=("Arial", 48, "bold"), anchor="w")
-    canvas.create_text(center_x + 95, logo_y, text="DZ", fill="#777777", font=("Arial", 48, "bold"), anchor="w")
+    canvas.create_text(center_x - 105, logo_y, text="IDARA", fill="#000000", font=("Arial", 48, "bold"), anchor="e")
+    canvas.create_text(center_x + 95, logo_y, text="DZ", fill="#777777", font=("Arial", 48, "bold"), anchor="e")
 
     subtitle_y = logo_y + 85
     canvas.create_line(center_x - 190, subtitle_y, center_x - 120, subtitle_y, fill="#bbbbbb")
