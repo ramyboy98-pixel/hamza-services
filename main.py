@@ -1,4 +1,5 @@
 import tkinter as tk
+import tkinter.messagebox as messagebox
 from PIL import Image, ImageTk
 import os
 import sys
@@ -5233,6 +5234,674 @@ def on_request_type_key(event):
         confirm_request_type_selection()
     elif event.keysym == "Escape":
         close_request_type_dropdown()
+
+
+
+
+# ============================================================
+# FIXED DYNAMIC CARDS SYSTEM - stable Arabic workflow
+# ============================================================
+
+HIDDEN_BUILTIN_CARDS_FILE = os.path.join(os.path.expanduser("~"), "IDARA_DZ", "hidden_builtin_cards.json")
+_long_press_after_id = None
+_long_press_title = None
+
+
+def load_hidden_builtin_cards():
+    try:
+        if os.path.exists(HIDDEN_BUILTIN_CARDS_FILE):
+            with open(HIDDEN_BUILTIN_CARDS_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            return set(data if isinstance(data, list) else [])
+    except Exception:
+        pass
+    return set()
+
+
+def save_hidden_builtin_cards(hidden_set):
+    os.makedirs(os.path.dirname(HIDDEN_BUILTIN_CARDS_FILE), exist_ok=True)
+    with open(HIDDEN_BUILTIN_CARDS_FILE, "w", encoding="utf-8") as f:
+        json.dump(list(hidden_set), f, ensure_ascii=False, indent=2)
+
+
+def hide_builtin_card(title):
+    hidden = load_hidden_builtin_cards()
+    hidden.add(title)
+    save_hidden_builtin_cards(hidden)
+
+
+def init_dynamic_database():
+    conn = sqlite3.connect(DYNAMIC_DB_PATH)
+    cur = conn.cursor()
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS dynamic_cards (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            template_path TEXT,
+            is_visible INTEGER DEFAULT 1,
+            sort_order INTEGER DEFAULT 999,
+            created_at TEXT
+        )
+    """)
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS dynamic_fields (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            card_id INTEGER NOT NULL,
+            field_name TEXT NOT NULL,
+            field_type TEXT DEFAULT 'text',
+            sort_order INTEGER DEFAULT 999,
+            FOREIGN KEY(card_id) REFERENCES dynamic_cards(id) ON DELETE CASCADE
+        )
+    """)
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS dynamic_drafts (
+            card_id INTEGER NOT NULL,
+            field_name TEXT NOT NULL,
+            field_value TEXT,
+            PRIMARY KEY(card_id, field_name)
+        )
+    """)
+
+    conn.commit()
+    conn.close()
+
+
+def db_fetchall(query, params=()):
+    init_dynamic_database()
+    conn = sqlite3.connect(DYNAMIC_DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cur = conn.cursor()
+    cur.execute(query, params)
+    rows = cur.fetchall()
+    conn.close()
+    return rows
+
+
+def db_execute(query, params=()):
+    init_dynamic_database()
+    conn = sqlite3.connect(DYNAMIC_DB_PATH)
+    cur = conn.cursor()
+    cur.execute(query, params)
+    conn.commit()
+    last_id = cur.lastrowid
+    conn.close()
+    return last_id
+
+
+def infer_field_type(field_name):
+    name = (field_name or "").strip()
+    if "تاريخ" in name or "ميلاد" in name:
+        return "date"
+    return "text"
+
+
+def normalize_fields_text(fields_text):
+    lines = []
+    for line in (fields_text or "").splitlines():
+        clean = line.strip()
+        if not clean:
+            continue
+        if "|" in clean:
+            name = clean.split("|", 1)[0].strip()
+        else:
+            name = clean
+        if name:
+            lines.append(name)
+    return lines
+
+
+def save_dynamic_fields(card_id, fields_text):
+    fields = normalize_fields_text(fields_text)
+    for idx, name in enumerate(fields):
+        db_execute(
+            "INSERT INTO dynamic_fields(card_id, field_name, field_type, sort_order) VALUES (?, ?, ?, ?)",
+            (card_id, name, infer_field_type(name), idx)
+        )
+
+
+def add_dynamic_card(title, fields_text, template_path=""):
+    title = (title or "").strip()
+    if not title:
+        messagebox.showwarning("تنبيه", "اكتب اسم البطاقة أولا.")
+        return None
+
+    stored_template = ""
+    if template_path and os.path.exists(template_path):
+        ext = os.path.splitext(template_path)[1].lower()
+        stored_template = os.path.join(DYNAMIC_TEMPLATES_DIR, f"{uuid.uuid4().hex}{ext}")
+        shutil.copy2(template_path, stored_template)
+
+    rows = db_fetchall("SELECT MAX(sort_order) AS max_order FROM dynamic_cards")
+    sort_order = 999 if not rows or rows[0]["max_order"] is None else int(rows[0]["max_order"]) + 1
+
+    card_id = db_execute(
+        "INSERT INTO dynamic_cards(title, template_path, is_visible, sort_order, created_at) VALUES (?, ?, 1, ?, ?)",
+        (title, stored_template, sort_order, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    )
+
+    save_dynamic_fields(card_id, fields_text)
+    return card_id
+
+
+def update_dynamic_card(card_id, title, fields_text, template_path=""):
+    title = (title or "").strip()
+    if not title:
+        messagebox.showwarning("تنبيه", "اكتب اسم البطاقة أولا.")
+        return
+
+    if template_path and os.path.exists(template_path):
+        ext = os.path.splitext(template_path)[1].lower()
+        stored_template = os.path.join(DYNAMIC_TEMPLATES_DIR, f"{uuid.uuid4().hex}{ext}")
+        shutil.copy2(template_path, stored_template)
+        db_execute("UPDATE dynamic_cards SET title=?, template_path=? WHERE id=?", (title, stored_template, card_id))
+    else:
+        db_execute("UPDATE dynamic_cards SET title=? WHERE id=?", (title, card_id))
+
+    db_execute("DELETE FROM dynamic_fields WHERE card_id=?", (card_id,))
+    save_dynamic_fields(card_id, fields_text)
+
+
+def delete_dynamic_card(card_id):
+    db_execute("DELETE FROM dynamic_drafts WHERE card_id=?", (card_id,))
+    db_execute("DELETE FROM dynamic_fields WHERE card_id=?", (card_id,))
+    db_execute("DELETE FROM dynamic_cards WHERE id=?", (card_id,))
+
+
+def load_dynamic_draft(card_id):
+    rows = db_fetchall("SELECT field_name, field_value FROM dynamic_drafts WHERE card_id=?", (card_id,))
+    return {r["field_name"]: r["field_value"] or "" for r in rows}
+
+
+def save_dynamic_draft_value(card_id, field_name, value):
+    db_execute(
+        "INSERT OR REPLACE INTO dynamic_drafts(card_id, field_name, field_value) VALUES (?, ?, ?)",
+        (card_id, field_name, value)
+    )
+
+
+def clear_dynamic_context_menu():
+    global dynamic_context_menu_items
+    for item in dynamic_context_menu_items:
+        try:
+            canvas.delete(item)
+        except Exception:
+            pass
+    dynamic_context_menu_items = []
+
+
+def show_card_context_menu(x, y, title):
+    global dynamic_context_menu_items
+    clear_dynamic_context_menu()
+
+    dynamic_rows = db_fetchall("SELECT * FROM dynamic_cards WHERE title=? AND is_visible=1", (title,))
+    is_dynamic = bool(dynamic_rows)
+    card_id = dynamic_rows[0]["id"] if is_dynamic else None
+
+    box = rounded_home_rect(x, y, x + 155, y + 92, r=10, fill="#ffffff", outline="#d0d0d0", width=1)
+    edit_text = canvas.create_text(x + 78, y + 28, text="✏️ تعديل", fill="#000000", font=("Arial", 14, "bold"))
+    delete_text = canvas.create_text(x + 78, y + 66, text="🗑️ حذف", fill="#d62323", font=("Arial", 14, "bold"))
+    dynamic_context_menu_items.extend([box, edit_text, delete_text])
+
+    def edit_click(event):
+        clear_dynamic_context_menu()
+        if is_dynamic:
+            show_dynamic_card_editor(card_id)
+        else:
+            messagebox.showinfo("تنبيه", "التعديل الكامل متاح للبطاقات التي تضيفها من زر + فقط. البطاقات الأساسية سننقلها لاحقًا للنظام الديناميكي.")
+
+    def delete_click(event):
+        clear_dynamic_context_menu()
+        if is_dynamic:
+            delete_dynamic_card(card_id)
+        else:
+            hide_builtin_card(title)
+        show_written_request_menu()
+
+    for item in (edit_text, delete_text):
+        canvas.tag_bind(item, "<Enter>", lambda e: root.config(cursor="hand2"))
+        canvas.tag_bind(item, "<Leave>", lambda e: root.config(cursor=""))
+
+    canvas.tag_bind(edit_text, "<Button-1>", edit_click)
+    canvas.tag_bind(delete_text, "<Button-1>", delete_click)
+
+
+def start_card_long_press(event, title):
+    global _long_press_after_id, _long_press_title
+    _long_press_title = title
+
+    if _long_press_after_id:
+        try:
+            root.after_cancel(_long_press_after_id)
+        except Exception:
+            pass
+
+    _long_press_after_id = root.after(650, lambda: show_card_context_menu(event.x, event.y, title))
+
+
+def cancel_card_long_press(event=None):
+    global _long_press_after_id, _long_press_title
+    if _long_press_after_id:
+        try:
+            root.after_cancel(_long_press_after_id)
+        except Exception:
+            pass
+    _long_press_after_id = None
+    _long_press_title = None
+
+
+def show_dynamic_card_editor(card_id=None):
+    global current_page
+    current_page = "dynamic_card_editor"
+    clear_screen()
+
+    width = root.winfo_width()
+    height = root.winfo_height()
+
+    canvas.create_rectangle(0, 0, width, height, fill="#ffffff", outline="#ffffff")
+    draw_home_sidebar("home")
+
+    center_x = 120 + (width - 120) // 2
+    editing = card_id is not None
+
+    canvas.create_text(
+        center_x,
+        58,
+        text="تعديل بطاقة طلب خطي" if editing else "إضافة بطاقة طلب خطي",
+        fill="#000000",
+        font=("Arial", 32, "bold")
+    )
+
+    old_title = ""
+    old_fields = ""
+    old_template = ""
+
+    if editing:
+        rows = db_fetchall("SELECT * FROM dynamic_cards WHERE id=?", (card_id,))
+        if rows:
+            old_title = rows[0]["title"]
+            old_template = rows[0]["template_path"] or ""
+        fields = get_dynamic_fields(card_id)
+        old_fields = "\n".join([f["field_name"] for f in fields])
+
+    canvas.create_text(center_x + 300, 128, text="اسم البطاقة", fill="#000000", font=("Arial", 17, "bold"), anchor="e")
+
+    title_entry = tk.Entry(root, font=("Arial", 16, "bold"), justify="right", bd=1, relief="solid")
+    title_entry.insert(0, old_title)
+    canvas.create_window(center_x, 168, window=title_entry, width=600, height=44)
+
+    canvas.create_text(center_x + 300, 228, text="خانات الاستمارة", fill="#000000", font=("Arial", 17, "bold"), anchor="e")
+    canvas.create_text(center_x, 258, text="اكتب أسماء الخانات فقط، كل خانة في سطر. البرنامج يعرف التاريخ تلقائيًا من كلمة تاريخ.", fill="#777777", font=("Arial", 12, "bold"))
+
+    fields_text = tk.Text(root, font=("Arial", 15), bd=1, relief="solid", wrap="word")
+    fields_text.tag_configure("right", justify="right")
+    fields_text.insert("1.0", old_fields)
+    fields_text.tag_add("right", "1.0", "end")
+    fields_text.bind("<KeyRelease>", lambda e: fields_text.tag_add("right", "1.0", "end"))
+    canvas.create_window(center_x, 375, window=fields_text, width=600, height=170)
+
+    template_path_value = {"path": ""}
+
+    template_label = canvas.create_text(
+        center_x,
+        502,
+        text=os.path.basename(old_template) if old_template else "لم يتم اختيار نموذج Word",
+        fill="#000000" if old_template else "#777777",
+        font=("Arial", 13, "bold")
+    )
+
+    choose_btn = rounded_home_rect(center_x - 310, 535, center_x - 75, 585, r=12, fill="#f4f4f4", outline="#d5d5d5", width=1)
+    choose_text = canvas.create_text(center_x - 192, 560, text="اختيار / تغيير نموذج Word", fill="#000000", font=("Arial", 13, "bold"))
+
+    def choose_template(event):
+        path = filedialog.askopenfilename(title="اختر نموذج Word", filetypes=[("Word files", "*.docx")])
+        if path:
+            template_path_value["path"] = path
+            canvas.itemconfig(template_label, text=os.path.basename(path), fill="#000000")
+
+    for item in (choose_btn, choose_text):
+        canvas.tag_bind(item, "<Enter>", lambda e: root.config(cursor="hand2"))
+        canvas.tag_bind(item, "<Leave>", lambda e: root.config(cursor=""))
+        canvas.tag_bind(item, "<Button-1>", choose_template)
+
+    save_btn = rounded_home_rect(center_x + 75, 535, center_x + 310, 585, r=12, fill="#000000", outline="#000000", width=1)
+    save_text = canvas.create_text(center_x + 192, 560, text="حفظ", fill="#ffffff", font=("Arial", 15, "bold"))
+
+    def save_card(event):
+        title = title_entry.get().strip()
+        fields = fields_text.get("1.0", "end").strip()
+        if editing:
+            update_dynamic_card(card_id, title, fields, template_path_value["path"])
+        else:
+            add_dynamic_card(title, fields, template_path_value["path"])
+        written_request_search_query = ""
+        show_written_request_menu()
+
+    for item in (save_btn, save_text):
+        canvas.tag_bind(item, "<Enter>", lambda e: root.config(cursor="hand2"))
+        canvas.tag_bind(item, "<Leave>", lambda e: root.config(cursor=""))
+        canvas.tag_bind(item, "<Button-1>", save_card)
+
+
+def make_dynamic_entry(x, y, w, placeholder, field_name, field_type):
+    value = dynamic_form_values.get(field_name, "")
+
+    canvas.create_line(x - w // 2, y + 18, x + w // 2, y + 18, fill="#b8b8b8", width=2)
+
+    entry = tk.Entry(
+        root,
+        font=("Arial", 16, "bold"),
+        justify="right",
+        bd=0,
+        bg="#ffffff",
+        fg="#111111",
+        insertbackground="#111111"
+    )
+
+    if value:
+        entry.insert(0, value)
+        entry.config(fg="#111111")
+    else:
+        entry.insert(0, placeholder)
+        entry.config(fg="#b5b5b5")
+
+    def focus_in(event):
+        if entry.get() == placeholder:
+            entry.delete(0, "end")
+            entry.config(fg="#111111")
+
+    def focus_out(event):
+        if not entry.get().strip():
+            entry.delete(0, "end")
+            entry.insert(0, placeholder)
+            entry.config(fg="#b5b5b5")
+            dynamic_form_values[field_name] = ""
+            if dynamic_current_card_id:
+                save_dynamic_draft_value(dynamic_current_card_id, field_name, "")
+
+    def save_value(event=None):
+        val = entry.get()
+        real_value = "" if val == placeholder else val
+        dynamic_form_values[field_name] = real_value
+        if dynamic_current_card_id:
+            save_dynamic_draft_value(dynamic_current_card_id, field_name, real_value)
+
+    entry.bind("<FocusIn>", focus_in)
+    entry.bind("<FocusOut>", focus_out)
+    entry.bind("<KeyRelease>", save_value)
+
+    canvas.create_window(x, y, window=entry, width=w, height=34)
+    return entry
+
+
+def show_dynamic_card_form(card_id):
+    global current_page, dynamic_current_card_id, dynamic_form_values
+    current_page = "dynamic_card_form"
+    dynamic_current_card_id = card_id
+
+    rows = db_fetchall("SELECT * FROM dynamic_cards WHERE id=?", (card_id,))
+    if not rows:
+        return
+
+    dynamic_form_values = load_dynamic_draft(card_id)
+    card = rows[0]
+    fields = get_dynamic_fields(card_id)
+
+    clear_screen()
+    width = root.winfo_width()
+    height = root.winfo_height()
+
+    canvas.create_rectangle(0, 0, width, height, fill="#ffffff", outline="#ffffff")
+    draw_home_sidebar("home")
+
+    center_x = 120 + (width - 120) // 2
+    canvas.create_text(center_x, 55, text=card["title"], fill="#000000", font=("Arial", 34, "bold"))
+
+    right_col_x = int(width * 0.80)
+    left_col_x = int(width * 0.34)
+    field_w = int(width * 0.29)
+    start_y = int(height * 0.12)
+    gap = int(height * 0.075)
+
+    for idx, field in enumerate(fields):
+        col_x = right_col_x if idx % 2 == 0 else left_col_x
+        y = start_y + (idx // 2) * gap
+        make_dynamic_entry(col_x, y, field_w, field["field_name"], field["field_name"], field["field_type"])
+
+    preview_text = canvas.create_text(
+        int(width * 0.90),
+        int(height * 0.88),
+        text="معاينة",
+        fill="#55bfff",
+        font=("Arial", 27, "bold"),
+        anchor="center"
+    )
+
+    def preview_enter(event):
+        canvas.itemconfig(preview_text, fill="#1d9fee")
+        root.config(cursor="hand2")
+
+    def preview_leave(event):
+        canvas.itemconfig(preview_text, fill="#55bfff")
+        root.config(cursor="")
+
+    def preview_click(event):
+        open_dynamic_generated_word(card_id)
+
+    canvas.tag_bind(preview_text, "<Enter>", preview_enter)
+    canvas.tag_bind(preview_text, "<Leave>", preview_leave)
+    canvas.tag_bind(preview_text, "<Button-1>", preview_click)
+
+
+def show_written_request_menu():
+    global current_page, written_request_menu_scroll, written_request_search_query
+    current_page = "written_request_menu"
+    clear_screen()
+    init_dynamic_database()
+
+    width = root.winfo_width()
+    height = root.winfo_height()
+
+    canvas.create_rectangle(0, 0, width, height, fill="#efefef", outline="#efefef")
+    draw_home_sidebar("home")
+
+    search_x = width - 290
+    search_w = 280
+    canvas.create_line(search_x - search_w, 104, search_x + 10, 104, fill="#bdbdbd", width=2)
+
+    search_entry = tk.Entry(root, bd=0, bg="#efefef", fg="#111111", font=("Arial", 17, "bold"), justify="right", insertbackground="#111111")
+
+    if written_request_search_query:
+        search_entry.insert(0, written_request_search_query)
+        search_entry.config(fg="#111111")
+    else:
+        search_entry.insert(0, "بحث")
+        search_entry.config(fg="#9b9b9b")
+
+    def s_in(e):
+        if search_entry.get() == "بحث":
+            search_entry.delete(0, "end")
+            search_entry.config(fg="#111111")
+
+    def s_out(e):
+        global written_request_search_query
+        if not search_entry.get():
+            written_request_search_query = ""
+            search_entry.insert(0, "بحث")
+            search_entry.config(fg="#9b9b9b")
+
+    def do_search(e=None):
+        global written_request_search_query, written_request_menu_scroll
+        text = search_entry.get().strip()
+        if text == "بحث":
+            text = ""
+        written_request_search_query = text
+        written_request_menu_scroll = 0
+        show_written_request_menu()
+
+    search_entry.bind("<FocusIn>", s_in)
+    search_entry.bind("<FocusOut>", s_out)
+    search_entry.bind("<KeyRelease>", do_search)
+
+    canvas.create_window(search_x - 125, 82, window=search_entry, width=search_w - 42, height=30)
+    canvas.create_text(search_x + 5, 82, text="⌕", fill="#a5a5a5", font=("Arial", 28))
+
+    add_center_x = search_x - search_w - 45
+    add_circle = canvas.create_oval(add_center_x - 23, 59, add_center_x + 23, 105, fill="#ffffff", outline="#d0d0d0", width=2)
+    add_text = canvas.create_text(add_center_x, 82, text="+", fill="#000000", font=("Arial", 26, "bold"))
+
+    def add_enter(event):
+        canvas.itemconfig(add_circle, fill="#fafafa")
+        root.config(cursor="hand2")
+
+    def add_leave(event):
+        canvas.itemconfig(add_circle, fill="#ffffff")
+        root.config(cursor="")
+
+    def add_click(event):
+        show_dynamic_card_editor()
+
+    for item in (add_circle, add_text):
+        canvas.tag_bind(item, "<Enter>", add_enter)
+        canvas.tag_bind(item, "<Leave>", add_leave)
+        canvas.tag_bind(item, "<Button-1>", add_click)
+
+    hidden = load_hidden_builtin_cards()
+    dynamic_titles = [row["title"] for row in get_dynamic_cards()]
+    all_items = [item for item in written_request_items if item not in hidden] + dynamic_titles
+
+    query = written_request_search_query.strip().lower()
+    if query:
+        filtered_items = [item for item in all_items if query in item.lower()]
+    else:
+        filtered_items = list(all_items)
+
+    visible_capacity = 30
+    max_scroll = max(0, len(filtered_items) - visible_capacity)
+    written_request_menu_scroll = max(0, min(written_request_menu_scroll, max_scroll))
+    visible_items = filtered_items[written_request_menu_scroll:written_request_menu_scroll + visible_capacity]
+
+    # Smaller cards: 3 columns x 10 rows
+    columns = [
+        visible_items[20:30],
+        visible_items[10:20],
+        visible_items[0:10],
+    ]
+
+    col_x = [310, 750, 1190]
+    start_y = 145
+    gap_y = 60
+    card_w = 350
+    card_h = 46
+
+    for c, items in enumerate(columns):
+        for r, title in enumerate(items):
+            x = col_x[c]
+            y = start_y + r * gap_y
+
+            rounded_home_rect(x - card_w//2 + 6, y - card_h//2 + 8, x + card_w//2 + 6, y + card_h//2 + 8, r=8, fill="#cfcfcf", outline="#cfcfcf")
+
+            card = rounded_home_rect(x - card_w//2, y - card_h//2, x + card_w//2, y + card_h//2, r=8, fill="#ffffff", outline="#ececec")
+
+            size = 17
+            sub = ""
+            if title == "طلب توظيف عام":
+                size = 16
+                sub = "خارج إطار المسابقات"
+
+            txt = canvas.create_text(x, y - 2 if sub else y, text=title, fill="#000000", font=("Arial", size, "bold"))
+
+            subtxt = None
+            if sub:
+                subtxt = canvas.create_text(x, y + 14, text=sub, fill="#555555", font=("Arial", 9, "bold"))
+
+            def enter(e, cd=card):
+                canvas.itemconfig(cd, fill="#fafafa")
+                root.config(cursor="hand2")
+
+            def leave(e, cd=card):
+                canvas.itemconfig(cd, fill="#ffffff")
+                root.config(cursor="")
+
+            def click(e, t=title):
+                cancel_card_long_press()
+                clear_dynamic_context_menu()
+                job_form_entries["request_type"] = t
+                if t == "طلب توظيف 1":
+                    show_job_request_1_form()
+                elif t == "طلب توظيف 2":
+                    show_job_request_2_form()
+                elif t == "مسابقة الجمارك":
+                    show_customs_exam_form()
+                elif t == "مسابقة الشرطة":
+                    show_police_exam_form()
+                elif t == "مسابقة الحماية المدنية":
+                    show_civil_protection_exam_form()
+                elif t == "عقود ماقبل التشغيل":
+                    show_pre_employment_contract_form()
+                elif t == "مسابقة الماستر":
+                    show_master_exam_form()
+                else:
+                    dynamic_card_rows = db_fetchall("SELECT id FROM dynamic_cards WHERE title=? AND is_visible=1", (t,))
+                    if dynamic_card_rows:
+                        show_dynamic_card_form(dynamic_card_rows[0]["id"])
+                    else:
+                        show_job_request_form()
+
+            def right_click(e, t=title):
+                cancel_card_long_press()
+                show_card_context_menu(e.x, e.y, t)
+
+            def press(e, t=title):
+                start_card_long_press(e, t)
+
+            bind_items = [card, txt]
+            if subtxt:
+                bind_items.append(subtxt)
+
+            for it in bind_items:
+                canvas.tag_bind(it, "<Enter>", enter)
+                canvas.tag_bind(it, "<Leave>", leave)
+                canvas.tag_bind(it, "<Button-1>", click)
+                canvas.tag_bind(it, "<Button-3>", right_click)
+                canvas.tag_bind(it, "<ButtonPress-1>", press)
+                canvas.tag_bind(it, "<ButtonRelease-1>", cancel_card_long_press)
+
+    if not visible_items:
+        canvas.create_text(760, 395, text="لا توجد نتائج", fill="#777777", font=("Arial", 28, "bold"))
+
+    if written_request_menu_scroll > 0:
+        canvas.create_text(width - 55, 145, text="▲", fill="#777777", font=("Arial", 20, "bold"))
+    if written_request_menu_scroll < max_scroll:
+        canvas.create_text(width - 55, height - 45, text="▼", fill="#777777", font=("Arial", 20, "bold"))
+
+
+def scroll_written_request_menu(event):
+    global written_request_menu_scroll
+    if current_page != "written_request_menu":
+        return
+
+    hidden = load_hidden_builtin_cards()
+    dynamic_titles = [row["title"] for row in get_dynamic_cards()]
+    all_items = [item for item in written_request_items if item not in hidden] + dynamic_titles
+
+    query = written_request_search_query.strip().lower()
+    if query:
+        filtered_items = [item for item in all_items if query in item.lower()]
+    else:
+        filtered_items = list(all_items)
+
+    max_scroll = max(0, len(filtered_items) - 30)
+
+    if event.delta < 0:
+        written_request_menu_scroll += 3
+    else:
+        written_request_menu_scroll -= 3
+
+    written_request_menu_scroll = max(0, min(written_request_menu_scroll, max_scroll))
+    show_written_request_menu()
 
 
 root.bind("<Configure>", on_resize)
