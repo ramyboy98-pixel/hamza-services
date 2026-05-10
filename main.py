@@ -155,6 +155,7 @@ def apply_client_to_form(client):
 
 root = tk.Tk()
 
+
 try:
     root.state("zoomed")
 except Exception:
@@ -4665,11 +4666,9 @@ def on_resize(event):
         elif current_page == "written_request_menu":
             show_written_request_menu()
         elif current_page == "card_builder":
-            show_card_builder(current_dynamic_card_id)
+            show_card_builder()
         elif current_page == "dynamic_form":
             show_dynamic_form(current_dynamic_card_id)
-        elif current_page == "internal_template_editor":
-            show_internal_template_editor(current_dynamic_card_id)
         elif current_page == "dynamic_calendar":
             show_dynamic_calendar(current_dynamic_card_id, dynamic_date_field_name)
         elif current_page == "settings":
