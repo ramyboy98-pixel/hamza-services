@@ -406,7 +406,31 @@ def on_resize(event=None):
     elif current_page == "about":
         show_about()
 
-root.bind("<Configure>", on_resize)
+resize_after_id = None
+
+def smart_resize(event=None):
+    global resize_after_id
+
+    if resize_after_id:
+        root.after_cancel(resize_after_id)
+
+    resize_after_id = root.after(120, redraw_page)
+
+def redraw_page():
+
+    if current_page == "home":
+        show_home()
+
+    elif current_page == "documents":
+        show_documents()
+
+    elif current_page == "settings":
+        show_settings()
+
+    elif current_page == "about":
+        show_about()
+
+root.bind("<Configure>", smart_resize)
 
 show_home()
 
