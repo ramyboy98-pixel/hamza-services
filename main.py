@@ -161,7 +161,9 @@ def draw_sidebar(active="home"):
         icon_img = load_image(icon_file)
 
         if icon_img:
-            icon = canvas.create_image(65, y, image=icon_img)
+            side_icon = icon_img.subsample(12, 12)
+icon = canvas.create_image(65, y, image=side_icon)
+images[f"{icon_file}_side"] = side_icon
         else:
             fallback = {
                 "home": "⌂",
@@ -203,7 +205,9 @@ def draw_sidebar(active="home"):
     # أيقونة الوضع الداكن
     moon_img = load_image("moon.png")
     if moon_img:
-        moon = canvas.create_image(65, h - 140, image=moon_img)
+        moon_small = moon_img.subsample(12, 12)
+moon = canvas.create_image(65, h - 140, image=moon_small)
+images["moon_small"] = moon_small
     else:
         moon = canvas.create_text(
             65,
@@ -216,7 +220,9 @@ def draw_sidebar(active="home"):
     # أيقونة الرجوع
     back_img = load_image("back.png")
     if back_img:
-        back = canvas.create_image(65, h - 60, image=back_img)
+        back_small = back_img.subsample(12, 12)
+back = canvas.create_image(65, h - 60, image=back_small)
+images["back_small"] = back_small
     else:
         back = canvas.create_text(
             65,
@@ -272,7 +278,9 @@ def draw_main_card(x, y, title, desc, icon_file, command):
     icon_img = load_image(icon_file)
 
     if icon_img:
-        icon = canvas.create_image(x, y1 + 75, image=icon_img)
+        small_icon = icon_img.subsample(5, 5)
+icon = canvas.create_image(x, y1 + 75, image=small_icon)
+images[f"{icon_file}_small"] = small_icon
     else:
         icon = canvas.create_text(
             x,
@@ -352,7 +360,9 @@ def draw_doc_card(x, y, title, icon_file):
     icon_img = load_image(icon_file)
 
     if icon_img:
-        icon = canvas.create_image(x, y1 + 75, image=icon_img)
+        small_icon = icon_img.subsample(5, 5)
+icon = canvas.create_image(x, y1 + 75, image=small_icon)
+images[f"{icon_file}_small"] = small_icon
     else:
         icon = canvas.create_text(
             x,
