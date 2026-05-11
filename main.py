@@ -1,554 +1,307 @@
-import os
-import sys
-import tkinter as tk
+from tkinter import *
+from PIL import Image, ImageTk
 
-APP_NAME = "IDARA DZ"
-
-# =========================
-# مسارات الملفات
-# =========================
-
-def resource_path(relative_path):
-    try:
-        base_path = sys._MEIPASS
-    except Exception:
-        base_path = os.path.abspath(".")
-    return os.path.join(base_path, relative_path)
-
-
-# =========================
-# إعداد التطبيق
-# =========================
-
-root = tk.Tk()
-root.title(APP_NAME)
-
-try:
-    root.state("zoomed")
-except Exception:
-    root.geometry("1400x820")
-
-root.configure(bg="white")
-root.minsize(1100, 700)
-
-canvas = tk.Canvas(root, bg="white", highlightthickness=0)
-canvas.pack(fill="both", expand=True)
-
-current_page = "home"
-page_history = []
-images = {}
-
+root = Tk()
+root.title("IDARA DZ")
+root.geometry("1400x900")
+root.configure(bg="#f5f5f5")
+root.state("zoomed")
 
 # =========================
 # تحميل الصور
 # =========================
 
-def load_image(filename):
-    if filename in images:
-        return images[filename]
+images = {}
 
-    path = resource_path(os.path.join("assets", filename))
+def load_icon(path, size):
+    img = Image.open(path)
+    img = img.resize(size)
+    photo = ImageTk.PhotoImage(img)
+    images[path] = photo
+    return photo
 
-    if not os.path.exists(path):
-        return None
+# القائمة الجانبية
+home_icon = load_icon("assets/home.png", (42, 42))
+settings_icon = load_icon("assets/settings.png", (42, 42))
+info_icon = load_icon("assets/info.png", (42, 42))
+moon_icon = load_icon("assets/moon.png", (36, 36))
+back_icon = load_icon("assets/back.png", (30, 30))
 
-    try:
-        img = tk.PhotoImage(file=path)
-        images[filename] = img
-        return img
-    except Exception:
-        return None
+# الصفحة الرئيسية
+documents_icon = load_icon("assets/documents.png", (130, 130))
+electronic_icon = load_icon("assets/electronic.png", (130, 130))
+archive_icon = load_icon("assets/archive.png", (130, 130))
 
+# صفحة الوثائق
+written_icon = load_icon("assets/written_request.png", (110, 110))
+honor_icon = load_icon("assets/honor_statement.png", (110, 110))
+cv_icon = load_icon("assets/cv.png", (110, 110))
+invoice_icon = load_icon("assets/invoice.png", (110, 110))
 
 # =========================
-# أدوات الرسم
+# CANVAS
 # =========================
 
-def clear_screen():
-    canvas.delete("all")
-    root.config(cursor="")
+canvas = Canvas(root, bg="#f5f5f5", highlightthickness=0)
+canvas.pack(fill=BOTH, expand=True)
 
+# =========================
+# صفحات
+# =========================
 
-def rounded_rect(x1, y1, x2, y2, r=12, fill="#fff", outline="#ddd"):
-    points = [
-        x1+r, y1,
-        x2-r, y1,
-        x2, y1,
-        x2, y1+r,
-        x2, y2-r,
-        x2, y2,
-        x2-r, y2,
-        x1+r, y2,
-        x1, y2,
-        x1, y2-r,
-        x1, y1+r,
-        x1, y1,
-    ]
+current_page = "home"
 
-    return canvas.create_polygon(
-        points,
-        smooth=True,
-        fill=fill,
-        outline=outline
+# =========================
+# القائمة الجانبية
+# =========================
+
+def draw_sidebar():
+    canvas.create_rectangle(0, 0, 140, 900, fill="white", outline="#dddddd")
+
+    canvas.create_text(
+        70,
+        35,
+        text="IDARA DZ",
+        font=("Arial", 20, "bold"),
+        fill="black"
     )
 
-
-def go_to(page_function):
-    global current_page
-
-    page_history.append(current_page)
-    page_function()
-
-
-def go_back():
-    if not page_history:
-        show_home()
-        return
-
-    last_page = page_history.pop()
-
-    if last_page == "home":
-        show_home(save_history=False)
-    elif last_page == "documents":
-        show_documents(save_history=False)
-    elif last_page == "settings":
-        show_settings(save_history=False)
-    elif last_page == "about":
-        show_about(save_history=False)
-    else:
-        show_home(save_history=False)
-
-
-# =========================
-# الشريط الجانبي
-# =========================
-
-def draw_sidebar(active="home"):
-    h = root.winfo_height()
-
+    # الرئيسية
     canvas.create_rectangle(
-        0, 0, 130, h,
-        fill="#f7f7f7",
-        outline="#e2e2e2"
+        20, 70, 120, 170,
+        fill="#111111",
+        outline=""
+    )
+
+    canvas.create_image(70, 105, image=home_icon)
+
+    canvas.create_text(
+        70,
+        145,
+        text="الرئيسية",
+        font=("Arial", 12, "bold"),
+        fill="white"
+    )
+
+    # الإعدادات
+    canvas.create_image(70, 240, image=settings_icon)
+
+    canvas.create_text(
+        70,
+        285,
+        text="الإعدادات",
+        font=("Arial", 11, "bold"),
+        fill="black"
+    )
+
+    # حول البرنامج
+    canvas.create_image(70, 380, image=info_icon)
+
+    canvas.create_text(
+        70,
+        425,
+        text="حول البرنامج",
+        font=("Arial", 11, "bold"),
+        fill="black"
+    )
+
+    # الوضع الداكن
+    canvas.create_image(70, 720, image=moon_icon)
+
+    canvas.create_text(
+        70,
+        760,
+        text="الوضع الداكن",
+        font=("Arial", 11, "bold"),
+        fill="black"
+    )
+
+    # رجوع
+    canvas.create_image(70, 830, image=back_icon)
+
+# =========================
+# بطاقة
+# =========================
+
+def draw_card(x1, y1, x2, y2, title, desc, icon_img, command=None):
+
+    card = canvas.create_rectangle(
+        x1,
+        y1,
+        x2,
+        y2,
+        fill="white",
+        outline="#e0e0e0",
+        width=1
+    )
+
+    canvas.create_image(
+        (x1 + x2) // 2,
+        y1 + 90,
+        image=icon_img
     )
 
     canvas.create_text(
-        65, 45,
-        text="IDARA DZ",
-        fill="#111",
-        font=("Arial", 18, "bold")
-    )
-
-    menu = [
-        ("home.png", "home", 150),
-        ("settings.png", "settings", 280),
-        ("info.png", "about", 410),
-    ]
-
-    for icon_file, page, y in menu:
-        selected = active == page
-
-        bg = "#000" if selected else "#f7f7f7"
-
-        btn = rounded_rect(
-            10, y-50,
-            120, y+50,
-            r=8,
-            fill=bg,
-            outline=bg
-        )
-
-        icon_img = load_image(icon_file)
-
-        if icon_img:
-            side_icon = icon_img.subsample(12, 12)
-icon = canvas.create_image(65, y, image=side_icon)
-images[f"{icon_file}_side"] = side_icon
-        else:
-            fallback = {
-                "home": "⌂",
-                "settings": "⚙",
-                "about": "ⓘ"
-            }.get(page, "●")
-
-            fg = "#fff" if selected else "#000"
-            icon = canvas.create_text(
-                65, y,
-                text=fallback,
-                fill=fg,
-                font=("Arial", 32, "bold")
-            )
-
-        def click(event, p=page):
-            if p == "home":
-                show_home()
-            elif p == "settings":
-                go_to(show_settings)
-            elif p == "about":
-                go_to(show_about)
-
-        def hover_in(event, b=btn, sel=selected):
-            if not sel:
-                canvas.itemconfig(b, fill="#eeeeee", outline="#eeeeee")
-            root.config(cursor="hand2")
-
-        def hover_out(event, b=btn, sel=selected):
-            if not sel:
-                canvas.itemconfig(b, fill="#f7f7f7", outline="#f7f7f7")
-            root.config(cursor="")
-
-        for item in (btn, icon):
-            canvas.tag_bind(item, "<Enter>", hover_in)
-            canvas.tag_bind(item, "<Leave>", hover_out)
-            canvas.tag_bind(item, "<Button-1>", click)
-
-    # أيقونة الوضع الداكن
-    moon_img = load_image("moon.png")
-    if moon_img:
-        moon_small = moon_img.subsample(12, 12)
-moon = canvas.create_image(65, h - 140, image=moon_small)
-images["moon_small"] = moon_small
-    else:
-        moon = canvas.create_text(
-            65,
-            h - 140,
-            text="☾",
-            fill="#000",
-            font=("Arial", 28, "bold")
-        )
-
-    # أيقونة الرجوع
-    back_img = load_image("back.png")
-    if back_img:
-        back_small = back_img.subsample(12, 12)
-back = canvas.create_image(65, h - 60, image=back_small)
-images["back_small"] = back_small
-    else:
-        back = canvas.create_text(
-            65,
-            h - 60,
-            text="↩",
-            fill="#000",
-            font=("Arial", 25, "bold")
-        )
-
-    for item in (moon,):
-        canvas.tag_bind(item, "<Enter>", lambda e: root.config(cursor="hand2"))
-        canvas.tag_bind(item, "<Leave>", lambda e: root.config(cursor=""))
-
-    for item in (back,):
-        canvas.tag_bind(item, "<Enter>", lambda e: root.config(cursor="hand2"))
-        canvas.tag_bind(item, "<Leave>", lambda e: root.config(cursor=""))
-        canvas.tag_bind(item, "<Button-1>", lambda e: go_back())
-
-
-# =========================
-# بطاقات الرئيسية
-# =========================
-
-def draw_main_card(x, y, title, desc, icon_file, command):
-    card_w = 290
-    card_h = 255
-
-    x1 = x - card_w//2
-    y1 = y - card_h//2
-    x2 = x + card_w//2
-    y2 = y + card_h//2
-
-    rounded_rect(
-        x1+8,
-        y1+10,
-        x2+8,
-        y2+10,
-        r=12,
-        fill="#e6e6e6",
-        outline="#e6e6e6"
-    )
-
-    card = rounded_rect(
-        x1,
-        y1,
-        x2,
-        y2,
-        r=12,
-        fill="#fff",
-        outline="#ddd"
-    )
-
-    icon_img = load_image(icon_file)
-
-    if icon_img:
-        small_icon = icon_img.subsample(5, 5)
-icon = canvas.create_image(x, y1 + 75, image=small_icon)
-images[f"{icon_file}_small"] = small_icon
-    else:
-        icon = canvas.create_text(
-            x,
-            y1 + 75,
-            text="▣",
-            fill="#000",
-            font=("Arial", 56, "bold")
-        )
-
-    title_id = canvas.create_text(
-        x,
-        y1 + 150,
+        (x1 + x2) // 2,
+        y1 + 210,
         text=title,
-        fill="#000",
-        font=("Arial", 27, "bold")
+        font=("Arial", 28, "bold"),
+        fill="black"
     )
 
-    desc_id = canvas.create_text(
-        x,
-        y1 + 205,
+    canvas.create_text(
+        (x1 + x2) // 2,
+        y1 + 265,
         text=desc,
-        fill="#555",
-        font=("Arial", 13, "bold"),
+        font=("Arial", 13),
+        fill="#444444",
+        width=250,
         justify="center"
     )
 
-    def hover_in(event):
-        canvas.itemconfig(card, fill="#fafafa")
-        root.config(cursor="hand2")
-
-    def hover_out(event):
-        canvas.itemconfig(card, fill="#fff")
-        root.config(cursor="")
-
-    def click(event):
-        command()
-
-    for item in (card, icon, title_id, desc_id):
-        canvas.tag_bind(item, "<Enter>", hover_in)
-        canvas.tag_bind(item, "<Leave>", hover_out)
-        canvas.tag_bind(item, "<Button-1>", click)
-
-
-# =========================
-# بطاقات الوثائق
-# =========================
-
-def draw_doc_card(x, y, title, icon_file):
-    card_w = 220
-    card_h = 240
-
-    x1 = x - card_w//2
-    y1 = y - card_h//2
-    x2 = x + card_w//2
-    y2 = y + card_h//2
-
-    rounded_rect(
-        x1+8,
-        y1+12,
-        x2+8,
-        y2+12,
-        r=8,
-        fill="#dddddd",
-        outline="#dddddd"
-    )
-
-    card = rounded_rect(
-        x1,
-        y1,
-        x2,
-        y2,
-        r=8,
-        fill="#fff",
-        outline="#eee"
-    )
-
-    icon_img = load_image(icon_file)
-
-    if icon_img:
-        small_icon = icon_img.subsample(5, 5)
-icon = canvas.create_image(x, y1 + 75, image=small_icon)
-images[f"{icon_file}_small"] = small_icon
-    else:
-        icon = canvas.create_text(
-            x,
-            y1 + 75,
-            text="▣",
-            fill="#000",
-            font=("Arial", 52, "bold")
-        )
-
-    txt = canvas.create_text(
-        x,
-        y1 + 175,
-        text=title,
-        fill="#000",
-        font=("Arial", 24, "bold")
-    )
-
-    def hover_in(event):
-        canvas.itemconfig(card, fill="#fafafa")
-        root.config(cursor="hand2")
-
-    def hover_out(event):
-        canvas.itemconfig(card, fill="#fff")
-        root.config(cursor="")
-
-    for item in (card, icon, txt):
-        canvas.tag_bind(item, "<Enter>", hover_in)
-        canvas.tag_bind(item, "<Leave>", hover_out)
-
+    if command:
+        canvas.tag_bind(card, "<Button-1>", command)
 
 # =========================
 # الصفحة الرئيسية
 # =========================
 
-def show_home(save_history=True):
-    global current_page
+def show_home(event=None):
 
+    global current_page
     current_page = "home"
 
-    clear_screen()
+    canvas.delete("all")
 
-    w = root.winfo_width()
-    h = root.winfo_height()
-
-    draw_sidebar("home")
-
-    center_x = 130 + (w - 130)//2
+    draw_sidebar()
 
     canvas.create_text(
-        center_x,
-        160,
+        770,
+        120,
         text="IDARADZ",
-        fill="#222",
-        font=("Arial", 58, "bold")
+        font=("Arial", 60, "bold"),
+        fill="#2d3748"
     )
 
     canvas.create_text(
-        center_x,
-        225,
+        770,
+        180,
         text="خدمات إدارية بكل احترافية",
-        fill="#555",
-        font=("Arial", 18, "bold")
+        font=("Arial", 24),
+        fill="#666666"
     )
 
-    y = h//2 + 40
-
-    draw_main_card(
-        center_x - 350,
-        y,
+    draw_card(
+        260, 260, 560, 600,
         "وثائق",
-        "إنشاء وتعديل مختلف الوثائق\nالإدارية بسهولة",
-        "documents.png",
-        lambda: go_to(show_documents)
+        "إنشاء و تعديل مختلف الوثائق الإدارية بسهولة",
+        documents_icon,
+        open_documents
     )
 
-    draw_main_card(
-        center_x,
-        y,
+    draw_card(
+        620, 260, 920, 600,
         "خدمات الكترونية",
-        "الوصول إلى الخدمات الإلكترونية\nوالمنصات الرسمية",
-        "electronic.png",
-        lambda: None
+        "الوصول إلى الخدمات الإلكترونية والمنصات الرسمية",
+        electronic_icon
     )
 
-    draw_main_card(
-        center_x + 350,
-        y,
+    draw_card(
+        980, 260, 1280, 600,
         "ارشيف",
-        "إدارة وأرشفة الملفات والوثائق\nوالوصول إليها بسهولة",
-        "archive.png",
-        lambda: None
+        "إدارة و أرشفة الملفات والوثائق والوصول إليها بسهولة",
+        archive_icon
     )
-
 
 # =========================
 # صفحة الوثائق
 # =========================
 
-def show_documents(save_history=True):
-    global current_page
+def open_documents(event=None):
 
+    global current_page
     current_page = "documents"
 
-    clear_screen()
+    canvas.delete("all")
 
-    w = root.winfo_width()
-    h = root.winfo_height()
-
-    draw_sidebar("home")
-
-    center_x = 130 + (w - 130)//2
+    draw_sidebar()
 
     canvas.create_text(
-        center_x,
-        110,
+        760,
+        100,
         text="وثائق",
-        fill="#000",
-        font=("Arial", 52, "bold")
+        font=("Arial", 56, "bold"),
+        fill="black"
     )
 
     canvas.create_text(
-        center_x,
-        155,
-        text="— إنشاء و تعديل مختلف الوثائق الإدارية —",
-        fill="#000",
-        font=("Arial", 14, "bold")
+        760,
+        150,
+        text="إنشاء و تعديل مختلف الوثائق الإدارية",
+        font=("Arial", 20),
+        fill="#555555"
     )
 
-    y = h//2 + 40
+    draw_card(
+        220, 260, 470, 560,
+        "طلب خطي",
+        "",
+        written_icon
+    )
 
-    draw_doc_card(center_x - 420, y, "طلب خطي", "written_request.png")
-    draw_doc_card(center_x - 140, y, "تصريح شرفي", "honor_statement.png")
-    draw_doc_card(center_x + 140, y, "سيرة ذاتية", "cv.png")
-    draw_doc_card(center_x + 420, y, "فاتورة", "invoice.png")
+    draw_card(
+        530, 260, 780, 560,
+        "تصريح شرفي",
+        "",
+        honor_icon
+    )
 
+    draw_card(
+        840, 260, 1090, 560,
+        "سيرة ذاتية",
+        "",
+        cv_icon
+    )
 
-# =========================
-# الإعدادات
-# =========================
-
-def show_settings(save_history=True):
-    global current_page
-
-    current_page = "settings"
-
-    clear_screen()
-
-    draw_sidebar("settings")
-
-
-# =========================
-# حول البرنامج
-# =========================
-
-def show_about(save_history=True):
-    global current_page
-
-    current_page = "about"
-
-    clear_screen()
-
-    draw_sidebar("about")
-
+    draw_card(
+        1150, 260, 1400, 560,
+        "فاتورة",
+        "",
+        invoice_icon
+    )
 
 # =========================
-# تحديث الحجم
+# رجوع
 # =========================
 
-def on_resize(event=None):
-    if event and event.widget != root:
-        return
+def back_page(event=None):
 
-    if current_page == "home":
-        show_home(save_history=False)
+    if current_page == "documents":
+        show_home()
 
-    elif current_page == "documents":
-        show_documents(save_history=False)
+# =========================
+# ربط الأزرار
+# =========================
 
-    elif current_page == "settings":
-        show_settings(save_history=False)
+canvas.bind("<Button-1>", lambda e: None)
 
-    elif current_page == "about":
-        show_about(save_history=False)
+# زر الرجوع
+def check_back(event):
 
+    x = event.x
+    y = event.y
 
-root.bind("<Configure>", on_resize)
+    if 40 <= x <= 100 and 810 <= y <= 850:
+        back_page()
+
+    if 20 <= x <= 120 and 70 <= y <= 170:
+        show_home()
+
+canvas.bind("<Button-1>", check_back)
+
+# =========================
+# تشغيل
+# =========================
 
 show_home()
 
