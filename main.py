@@ -23,6 +23,7 @@ canvas = tk.Canvas(root, bg="white", highlightthickness=0)
 canvas.pack(fill="both", expand=True)
 
 current_page = "home"
+previous_page = "home"
 
 # =========================
 # أدوات الرسم
@@ -54,10 +55,25 @@ def rounded_rect(x1, y1, x2, y2, r=12, fill="#fff", outline="#ddd"):
     )
 
 # =========================
+# الرجوع
+# =========================
+
+def go_back():
+
+    global previous_page
+
+    if previous_page == "home":
+        show_home()
+
+    elif previous_page == "documents":
+        show_documents()
+
+# =========================
 # الشريط الجانبي
 # =========================
 
 def draw_sidebar(active="home"):
+
     h = root.winfo_height()
 
     canvas.create_rectangle(
@@ -67,19 +83,20 @@ def draw_sidebar(active="home"):
     )
 
     canvas.create_text(
-        65, 45,
+        65,
+        45,
         text="IDARA DZ",
         fill="#111",
         font=("Arial", 18, "bold")
     )
 
     menu = [
-        ("الرئيسية", 150, "home"),
-        ("الإعدادات", 280, "settings"),
-        ("حول البرنامج", 410, "about")
+        ("🏠", 150, "home"),
+        ("🔧", 280, "settings"),
+        ("ℹ️", 410, "about")
     ]
 
-    for title, y, page in menu:
+    for icon, y, page in menu:
 
         selected = active == page
 
@@ -87,25 +104,35 @@ def draw_sidebar(active="home"):
         fg = "#fff" if selected else "#000"
 
         btn = rounded_rect(
-            10, y-50,
-            120, y+50,
+            10,
+            y-50,
+            120,
+            y+50,
             r=8,
             fill=bg,
             outline=bg
         )
 
         text = canvas.create_text(
-            65, y,
-            text=title,
+            65,
+            y,
+            text=icon,
             fill=fg,
-            font=("Arial", 14, "bold")
+            font=("Arial", 34)
         )
 
         def click(event, p=page):
+
+            global previous_page
+
+            previous_page = current_page
+
             if p == "home":
                 show_home()
+
             elif p == "settings":
                 show_settings()
+
             else:
                 show_about()
 
@@ -116,21 +143,21 @@ def draw_sidebar(active="home"):
     canvas.create_text(
         65,
         h - 120,
-        text="الوضع الداكن",
+        text="🌙",
         fill="#000",
-        font=("Arial", 11, "bold")
+        font=("Arial", 28)
     )
 
-    # خروج
-    exit_btn = canvas.create_text(
+    # رجوع
+    back_btn = canvas.create_text(
         65,
         h - 50,
-        text="خروج",
+        text="↩️",
         fill="#000",
-        font=("Arial", 12, "bold")
+        font=("Arial", 28)
     )
 
-    canvas.tag_bind(exit_btn, "<Button-1>", lambda e: root.destroy())
+    canvas.tag_bind(back_btn, "<Button-1>", lambda e: go_back())
 
 # =========================
 # بطاقات الرئيسية
@@ -138,7 +165,6 @@ def draw_sidebar(active="home"):
 
 def draw_main_card(x, y, title, desc, command):
 
-    # ظل
     rounded_rect(
         x-145+8,
         y-120+10,
@@ -159,12 +185,18 @@ def draw_main_card(x, y, title, desc, command):
         outline="#ddd"
     )
 
+    icons_map = {
+        "وثائق": "📄",
+        "خدمات الكترونية": "🌐",
+        "ارشيف": "🗂️"
+    }
+
     icon = canvas.create_text(
         x,
-        y-35,
-        text="▣",
+        y-40,
+        text=icons_map.get(title, "📄"),
         fill="#000",
-        font=("Arial", 60, "bold")
+        font=("Arial", 62)
     )
 
     title_id = canvas.create_text(
@@ -226,12 +258,19 @@ def draw_doc_card(x, y, title):
         outline="#eee"
     )
 
+    doc_icons = {
+        "طلب خطي": "📄",
+        "تصريح شرفي": "📝",
+        "سيرة ذاتية": "👤",
+        "فاتورة": "🧾"
+    }
+
     icon = canvas.create_text(
         x,
-        y-35,
-        text="▣",
+        y-40,
+        text=doc_icons.get(title, "📄"),
         fill="#000",
-        font=("Arial", 55, "bold")
+        font=("Arial", 58)
     )
 
     txt = canvas.create_text(
@@ -272,7 +311,6 @@ def show_home():
 
     center_x = 130 + (w - 130)//2
 
-    # العنوان
     canvas.create_text(
         center_x,
         160,
@@ -322,6 +360,9 @@ def show_home():
 def show_documents():
 
     global current_page
+    global previous_page
+
+    previous_page = current_page
     current_page = "documents"
 
     clear_screen()
@@ -367,9 +408,6 @@ def show_settings():
 
     clear_screen()
 
-    w = root.winfo_width()
-    h = root.winfo_height()
-
     draw_sidebar("settings")
 
 # =========================
@@ -383,16 +421,15 @@ def show_about():
 
     clear_screen()
 
-    w = root.winfo_width()
-    h = root.winfo_height()
-
     draw_sidebar("about")
 
 # =========================
 # تحديث الحجم
 # =========================
 
-def on_resize(event=None):
+resize_after = None
+
+def redraw():
 
     if current_page == "home":
         show_home()
@@ -405,30 +442,15 @@ def on_resize(event=None):
 
     elif current_page == "about":
         show_about()
-
-resize_after_id = None
 
 def smart_resize(event=None):
-    global resize_after_id
 
-    if resize_after_id:
-        root.after_cancel(resize_after_id)
+    global resize_after
 
-    resize_after_id = root.after(120, redraw_page)
+    if resize_after:
+        root.after_cancel(resize_after)
 
-def redraw_page():
-
-    if current_page == "home":
-        show_home()
-
-    elif current_page == "documents":
-        show_documents()
-
-    elif current_page == "settings":
-        show_settings()
-
-    elif current_page == "about":
-        show_about()
+    resize_after = root.after(120, redraw)
 
 root.bind("<Configure>", smart_resize)
 
